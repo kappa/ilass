@@ -37,7 +37,6 @@ impl<'de> Deserialize<'de> for CodecType {
 #[derive(Debug, Deserialize)]
 struct Stream {
     pub index: usize,
-    pub codec_long_name: String,
     pub channels: Option<usize>,
     /// `.mkv` does not store the duration in the streams; we have to use `format -> duration` instead
     pub duration: Option<String>,
@@ -187,7 +186,7 @@ impl VideoDecoderFFmpegBinary {
             OsString::from("-v"),
             OsString::from("error"),
             OsString::from("-show_entries"),
-            OsString::from("format=duration:stream=index,codec_long_name,channels,duration,codec_type"),
+            OsString::from("format=duration:stream=index,channels,duration,codec_type"),
             OsString::from("-of"),
             OsString::from("json"),
             OsString::from(file_path.as_ref()),
