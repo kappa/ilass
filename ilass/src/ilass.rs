@@ -1,7 +1,7 @@
 use crate::rating_type::{Rating, RatingDelta, RatingDeltaDelta, RatingDeltaExt, RatingExt};
 use crate::segments::{
-    combined_maximum_of_dual_iterators, DifferentialRatingBufferBuilder, OffsetBuffer, RatingBuffer, RatingIterator,
-    RatingSegment, SeparateDualBuffer,
+    DifferentialRatingBufferBuilder, OffsetBuffer, RatingBuffer, RatingIterator, RatingSegment, SeparateDualBuffer,
+    combined_maximum_of_dual_iterators,
 };
 use crate::time_types::{TimeDelta, TimePoint, TimeSpan};
 
@@ -165,10 +165,7 @@ impl Aligner {
 
         impl DeltaCorrect {
             fn new(rating: RatingDeltaDelta, time: TimeDelta) -> DeltaCorrect {
-                DeltaCorrect {
-                    rating,
-                    time,
-                }
+                DeltaCorrect { rating, time }
             }
         }
 

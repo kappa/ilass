@@ -474,10 +474,7 @@ where
     pub fn append(self, end_point: Point, data: D) -> SegmentIterator<D, impl Si<D>> {
         SegmentIterator::<D, _> {
             start: self.start,
-            iter: self.iter.chain(once(Segment::<D> {
-                end_point,
-                data,
-            })),
+            iter: self.iter.chain(once(Segment::<D> { end_point, data })),
         }
     }
 }

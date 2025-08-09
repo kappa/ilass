@@ -212,10 +212,8 @@ impl VideoDecoderFFmpegBinary {
             .filter(|s| s.codec_type == CodecType::Audio && s.channels.is_some());
 
         let best_stream_opt = match audio_index {
-            None => audio_streams
-                .min_by_key(|s| s.channels.unwrap()),
-            Some(ai) => audio_streams
-                .find(|s| s.index == ai)
+            None => audio_streams.min_by_key(|s| s.channels.unwrap()),
+            Some(ai) => audio_streams.find(|s| s.index == ai),
         };
 
         let best_stream: Stream = match best_stream_opt {

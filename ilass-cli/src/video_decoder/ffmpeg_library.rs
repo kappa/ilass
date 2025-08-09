@@ -84,7 +84,7 @@ impl VideoDecoderFFmpegLibrary {
                     if ai == (*stream).index {
                         audio_stream_opt = Some(stream);
                     } else {
-                        continue
+                        continue;
                     }
                 }
 

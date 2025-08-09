@@ -1194,17 +1194,15 @@ fn compute_sync_deltas(
 ) -> CorrectionInfo {
     let scaling_factor: FixedPointNumber = match conf.scaling_correct_mode {
         ScalingCorrectMode::None => FixedPointNumber::one(),
-        ScalingCorrectMode::Advanced => {
-            guess_scaling_factor(
-                ref_config.clone(),
-                ref_spans,
-                in_sub_id,
-                in_spans,
-                cache.clone(),
-                conf.ms_per_alg_step,
-                use_cache,
-            )
-        }
+        ScalingCorrectMode::Advanced => guess_scaling_factor(
+            ref_config.clone(),
+            ref_spans,
+            in_sub_id,
+            in_spans,
+            cache.clone(),
+            conf.ms_per_alg_step,
+            use_cache,
+        ),
     };
 
     let cached_deltas_opt: Option<Vec<i64>> = {
@@ -1615,7 +1613,9 @@ fn run() -> Result<(), TopLevelError> {
         )
         .get_matches();
 
-    let database_path = matches.get_one::<PathBuf>("database-dir").expect("missing database path");
+    let database_path = matches
+        .get_one::<PathBuf>("database-dir")
+        .expect("missing database path");
     let output_dir: PathBuf = matches
         .get_one::<PathBuf>("statistics-dir")
         .expect("missing output statistics directory path")

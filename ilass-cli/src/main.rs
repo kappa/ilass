@@ -11,10 +11,10 @@ extern crate subparse;
 
 use crate::subparse::SubtitleFileInterface;
 
-use ilass::{align, TimeDelta as AlgTimeDelta};
-use clap::{command, Arg, ArgAction};
+use clap::{Arg, ArgAction, command};
 use encoding_rs::Encoding;
 use failure::ResultExt;
+use ilass::{TimeDelta as AlgTimeDelta, align};
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::result::Result;
@@ -33,11 +33,9 @@ fn unpack_clap_number_f64(
 ) -> Result<f64, InputArgumentsError> {
     let parameter_value_str: &String = matches.get_one(parameter_name).unwrap();
     f64::from_str(parameter_value_str)
-        .with_context(|_| {
-            InputArgumentsErrorKind::ArgumentParseError {
-                argument_name: parameter_name.to_string(),
-                value: parameter_value_str.to_string(),
-            }
+        .with_context(|_| InputArgumentsErrorKind::ArgumentParseError {
+            argument_name: parameter_name.to_string(),
+            value: parameter_value_str.to_string(),
         })
         .map_err(InputArgumentsError::from)
 }
@@ -49,11 +47,9 @@ fn unpack_clap_number_i64(
 ) -> Result<i64, InputArgumentsError> {
     let parameter_value_str: &String = matches.get_one(parameter_name).unwrap();
     i64::from_str(parameter_value_str)
-        .with_context(|_| {
-            InputArgumentsErrorKind::ArgumentParseError {
-                argument_name: parameter_name.to_string(),
-                value: parameter_value_str.to_string(),
-            }
+        .with_context(|_| InputArgumentsErrorKind::ArgumentParseError {
+            argument_name: parameter_name.to_string(),
+            value: parameter_value_str.to_string(),
         })
         .map_err(InputArgumentsError::from)
 }
@@ -64,17 +60,13 @@ fn unpack_optional_clap_number_usize(
 ) -> Result<Option<usize>, InputArgumentsError> {
     match matches.get_one::<String>(parameter_name) {
         None => Ok(None),
-        Some(parameter_value_str) => {
-            usize::from_str(parameter_value_str)
-                .with_context(|_| {
-                    InputArgumentsErrorKind::ArgumentParseError {
-                        argument_name: parameter_name.to_string(),
-                        value: parameter_value_str.to_string(),
-                    }
-                })
-                .map(Some)
-                .map_err(InputArgumentsError::from)
-        }
+        Some(parameter_value_str) => usize::from_str(parameter_value_str)
+            .with_context(|_| InputArgumentsErrorKind::ArgumentParseError {
+                argument_name: parameter_name.to_string(),
+                value: parameter_value_str.to_string(),
+            })
+            .map(Some)
+            .map_err(InputArgumentsError::from),
     }
 }
 
@@ -83,7 +75,7 @@ pub fn get_encoding(opt: Option<&str>) -> Option<&'static Encoding> {
         None | Some("auto") => {
             // use automatic detection
             None
-        },
+        }
         Some(label) => {
             match Encoding::for_label_no_replacement(label.as_bytes()) {
                 None => {
@@ -257,7 +249,7 @@ fn parse_args() -> Result<Arguments, InputArgumentsError> {
         } else {
             Some(speed_optimization)
         },
-        audio_index: unpack_optional_clap_number_usize(&matches, "audio-index")?
+        audio_index: unpack_optional_clap_number_usize(&matches, "audio-index")?,
     })
 }
 
@@ -334,10 +326,8 @@ fn run() -> Result<(), failure::Error> {
         .into());
     }
 
-    let mut inc_aligner_timespans: Vec<ilass::TimeSpan> =
-        timings_to_alg_timespans(inc_file.timespans(), args.interval);
-    let ref_aligner_timespans: Vec<ilass::TimeSpan> =
-        timings_to_alg_timespans(ref_file.timespans(), args.interval);
+    let mut inc_aligner_timespans: Vec<ilass::TimeSpan> = timings_to_alg_timespans(inc_file.timespans(), args.interval);
+    let ref_aligner_timespans: Vec<ilass::TimeSpan> = timings_to_alg_timespans(ref_file.timespans(), args.interval);
 
     let mut fps_scaling_factor = 1.;
     if args.guess_fps_ratio {
@@ -484,10 +474,7 @@ fn run() -> Result<(), failure::Error> {
     }
 
     // incorrect file -> correct file
-    let shifted_timespans: Vec<SubtitleEntry> = corrected_timespans
-        .into_iter()
-        .map(SubtitleEntry::from)
-        .collect();
+    let shifted_timespans: Vec<SubtitleEntry> = corrected_timespans.into_iter().map(SubtitleEntry::from).collect();
 
     // write corrected files
     let mut correct_file = inc_file.into_subtitle_file();

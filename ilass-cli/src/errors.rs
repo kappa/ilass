@@ -127,7 +127,7 @@ pub enum InputSubtitleErrorKind {
     ReadingSubtitleFileFailed(PathBuf),
     UnknownSubtitleFormat(PathBuf),
     ParsingSubtitleFailed(PathBuf),
-    RetreivingSubtitleLinesFailed(PathBuf),
+    RetrievingSubtitleLinesFailed(PathBuf),
 }
 
 impl fmt::Display for InputSubtitleErrorKind {
@@ -142,7 +142,7 @@ impl fmt::Display for InputSubtitleErrorKind {
             InputSubtitleErrorKind::ParsingSubtitleFailed(path) => {
                 write!(f, "parsing subtitle file '{}' failed", path.display())
             }
-            InputSubtitleErrorKind::RetreivingSubtitleLinesFailed(path) => {
+            InputSubtitleErrorKind::RetrievingSubtitleLinesFailed(path) => {
                 write!(f, "retreiving subtitle file '{}' failed", path.display())
             }
         }
@@ -189,10 +189,20 @@ pub enum TopLevelErrorKind {
 impl fmt::Display for TopLevelErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-         TopLevelErrorKind::FileFormatMismatch { input_file_path, output_file_path, input_file_format } => write!(f, "output file '{}' seems to have a different format than input file '{}' with format '{}' (this program does not perform conversions)", output_file_path.display(), input_file_path.display(), input_file_format.get_name()),
-         TopLevelErrorKind::FailedToUpdateSubtitle => write!(f, "failed to change lines in the subtitle"),
-         TopLevelErrorKind::FailedToGenerateSubtitleData => write!(f, "failed to generate data for subtitle"),
-         TopLevelErrorKind::FailedToInstantiateSubtitleFile => write!(f, "failed to instantiate subtitle file"),
+            TopLevelErrorKind::FileFormatMismatch {
+                input_file_path,
+                output_file_path,
+                input_file_format,
+            } => write!(
+                f,
+                "output file '{}' seems to have a different format than input file '{}' with format '{}' (this program does not perform conversions)",
+                output_file_path.display(),
+                input_file_path.display(),
+                input_file_format.get_name()
+            ),
+            TopLevelErrorKind::FailedToUpdateSubtitle => write!(f, "failed to change lines in the subtitle"),
+            TopLevelErrorKind::FailedToGenerateSubtitleData => write!(f, "failed to generate data for subtitle"),
+            TopLevelErrorKind::FailedToInstantiateSubtitleFile => write!(f, "failed to instantiate subtitle file"),
         }
     }
 }

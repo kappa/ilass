@@ -1,4 +1,4 @@
-use std::cmp::{max, min, Ordering};
+use std::cmp::{Ordering, max, min};
 use std::ops::*;
 
 /// Implements conversion to integer variables for TimeDelta and TimePoint.

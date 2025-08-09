@@ -1,6 +1,6 @@
-use ilass::{TimeDelta as AlgTimeDelta, TimePoint as AlgTimePoint, TimeSpan as AlgTimeSpan};
 use encoding_rs::Encoding;
 use failure::ResultExt;
+use ilass::{TimeDelta as AlgTimeDelta, TimePoint as AlgTimePoint, TimeSpan as AlgTimeSpan};
 use pbr::ProgressBar;
 use std::cmp::{max, min};
 use std::fs::File;
@@ -14,13 +14,7 @@ pub mod errors;
 pub mod video_decoder;
 
 use subparse::timetypes::*;
-use subparse::{get_subtitle_format_err, parse_bytes, SubtitleFile};
-
-/*#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum VideoFileFormat {
-    /// we don't need to differentiate between video file formats in current code
-    NotImplemented,
-}*/
+use subparse::{SubtitleFile, get_subtitle_format_err, parse_bytes};
 
 pub struct NoProgressInfo {}
 
@@ -203,7 +197,7 @@ impl SubtitleFileHandler {
 
         let subparse_timespans: Vec<TimeSpan> = parsed_subtitle_data
             .get_subtitle_entries()
-            .with_context(|_| InputSubtitleErrorKind::RetreivingSubtitleLinesFailed(file_path.to_path_buf()))?
+            .with_context(|_| InputSubtitleErrorKind::RetrievingSubtitleLinesFailed(file_path.to_path_buf()))?
             .into_iter()
             .map(|subentry| subentry.timespan)
             .map(|timespan: TimeSpan| {
@@ -287,10 +281,11 @@ impl VideoFileHandler {
 
         let chunk_processor = video_decoder::ChunkedAudioReceiver::new(80, vad_processor);
 
-      let vad_buffer = video_decoder::VideoDecoder::decode(file_path, audio_index, chunk_processor, video_decode_progress)
-            .with_context(|_| InputVideoErrorKind::FailedToDecode {
-                path: PathBuf::from(file_path),
-            })?;
+        let vad_buffer =
+            video_decoder::VideoDecoder::decode(file_path, audio_index, chunk_processor, video_decode_progress)
+                .with_context(|_| InputVideoErrorKind::FailedToDecode {
+                    path: PathBuf::from(file_path),
+                })?;
 
         let mut voice_segments: Vec<(i64, i64)> = Vec::new();
         let mut voice_segment_start = 0;
@@ -320,12 +315,7 @@ impl VideoFileHandler {
 
         let subparse_timespans: Vec<TimeSpan> = voice_segments
             .into_iter()
-            .map(|(start, end)| {
-                TimeSpan::new(
-                    TimePoint::from_msecs(start * 10),
-                    TimePoint::from_msecs(end * 10),
-                )
-            })
+            .map(|(start, end)| TimeSpan::new(TimePoint::from_msecs(start * 10), TimePoint::from_msecs(end * 10)))
             .collect();
 
         Ok(VideoFileHandler {
@@ -366,9 +356,11 @@ impl InputFileHandler {
         }
 
         // Did not match any subtitle extensions we support, assume it's a video file.
-        Ok(VideoFileHandler::open_video_file(file_path, audio_index, video_decode_progress)
-            .map(InputFileHandler::Video)
-            .with_context(|_| InputFileErrorKind::VideoFile(file_path.to_path_buf()))?)
+        Ok(
+            VideoFileHandler::open_video_file(file_path, audio_index, video_decode_progress)
+                .map(InputFileHandler::Video)
+                .with_context(|_| InputFileErrorKind::VideoFile(file_path.to_path_buf()))?,
+        )
     }
 
     pub fn into_subtitle_file(self) -> Option<SubtitleFile> {
@@ -399,12 +391,7 @@ pub fn guess_fps_ratio(
     mut progress_handler: impl ilass::ProgressHandler,
 ) -> (Option<usize>, ilass::TimeDelta) {
     progress_handler.init(ratios.len() as i64);
-    let (delta, score) = ilass::align_nosplit(
-        ref_spans,
-        in_spans,
-        ilass::overlap_scoring,
-        ilass::NoProgressHandler,
-    );
+    let (delta, score) = ilass::align_nosplit(ref_spans, in_spans, ilass::overlap_scoring, ilass::NoProgressHandler);
     progress_handler.inc();
 
     //let desc = ["25/24", "25/23.976", "24/25", "24/23.976", "23.976/25", "23.976/24"];
@@ -413,8 +400,7 @@ pub fn guess_fps_ratio(
     let (mut opt_idx, mut opt_delta, mut opt_score) = (None, delta, score);
 
     for (scale_factor_idx, scaling_factor) in ratios.iter().cloned().enumerate() {
-        let stretched_in_spans: Vec<ilass::TimeSpan> =
-            in_spans.iter().map(|ts| ts.scaled(scaling_factor)).collect();
+        let stretched_in_spans: Vec<ilass::TimeSpan> = in_spans.iter().map(|ts| ts.scaled(scaling_factor)).collect();
 
         let (delta, score) = ilass::align_nosplit(
             ref_spans,
