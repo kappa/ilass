@@ -7,7 +7,7 @@ repository = "https://github.com/SandroHc/ilass/ilass-core"
 documentation = "https://docs.rs/ilass-core"
 readme = "README.md"
 keywords = ["subtitle", "align", "automatic", "api", "tool"]
-license = "GPL-3.0"
+license = "AGPL-3"
 edition = "2018"
 
 [features]
