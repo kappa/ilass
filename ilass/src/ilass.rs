@@ -282,7 +282,7 @@ impl Aligner {
                 });
             }
 
-            all_delta_corrects = Vec::with_capacity(4 * self.list.len() * self.reference.len());
+            all_delta_corrects = Vec::with_capacity(4 * delta_corrects.len());
 
             loop {
                 let max_heap_elem: MaxHeapInfo;
@@ -304,7 +304,7 @@ impl Aligner {
                 }
             }
 
-            assert!(all_delta_corrects.len() == 4 * self.list.len() * self.reference.len());
+            assert_eq!(all_delta_corrects.len(), 4 * delta_corrects.len());
             sorted_delta_corrects_iter = all_delta_corrects.iter().rev();
 
             first_delta_correct = all_delta_corrects

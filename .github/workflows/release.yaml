@@ -19,7 +19,7 @@ jobs:
           version=$(grep '^version = ' ./ilass-cli/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Install Rust
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-gnu
@@ -74,7 +74,7 @@ jobs:
           version=$(grep '^version = ' ./ilass-cli/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Install Rust
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
