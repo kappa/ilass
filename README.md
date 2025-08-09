@@ -87,14 +87,14 @@ compared to a (possibly not perfect) reference subtitle.
 Install [Rust and Cargo](https://www.rust-lang.org/en-US/install.html) then run:
 
 ```bash
-# this will create the lastest release in ~/.cargo/bin/ilass-cli
+# this will create the lastest release in ~/.cargo/bin/ilass
 $ cargo install ilass-cli
 ```
 
 
 The voice-activity module this project uses is written in C. Therefore a C compiler (`gcc` or `clang`) is needed to compile this project.
 
-To use `ilass-cli` with video files, `ffmpeg` and `ffprobe` have to be installed. It is used to extract the raw audio data. You can set the paths used by `ilass` using the environment variables `ILASS_FFMPEG_PATH` (default `ffmpeg`) and `ILASS_FFPROBE_PATH` (default `ffprobe`). 
+To use `ilass` with video files, `ffmpeg` and `ffprobe` have to be installed. It is used to extract the raw audio data. You can set the paths used by `ilass` using the environment variables `ILASS_FFMPEG_PATH` (default `ffmpeg`) and `ILASS_FFPROBE_PATH` (default `ffprobe`). 
 
 ### Building from Source 
 
@@ -125,11 +125,10 @@ $ cargo build --no-default-features --features ffmpeg-library
 
 ### Alias Setup
 
-*For Linux users:* It is recommended to add the folder path to your system path as well as setup an alias for `ilass` to `ilass-cli`. Add this to your `~/.bashrc` (or the setup file of your favorite shell):
+*For Linux users:* It is recommended to add the folder path to your system path. Add this to your `~/.bashrc` (or the setup file of your favorite shell):
 
 ```bash
 export PATH="$PATH:$HOME/.cargo/bin"
-alias ilass="ilass-cli"
 ```
 
 ## Folder structure

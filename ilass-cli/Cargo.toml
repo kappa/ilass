@@ -10,6 +10,10 @@ keywords = ["align", "subtitle", "automatic", "api", "tool"]
 license = "GPL-3.0"
 edition = "2018"
 
+[[bin]]
+name = "ilass"
+path = "src/main.rs"
+
 [features]
 default = ["ffmpeg-binary"]
 
