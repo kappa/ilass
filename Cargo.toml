@@ -3,7 +3,7 @@ members = ["ilass", "ilass-cli"]
 
 [workspace.package]
 authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
-edition = "2018"
+edition = "2024"
 keywords = ["subtitle", "align", "automatic", "api", "tool"]
 license = "AGPL-3"
 repository = "https://github.com/SandroHc/ilass"
