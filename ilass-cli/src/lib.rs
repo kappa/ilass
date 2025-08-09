@@ -1,4 +1,4 @@
-use ilass_core::{TimeDelta as AlgTimeDelta, TimePoint as AlgTimePoint, TimeSpan as AlgTimeSpan};
+use ilass::{TimeDelta as AlgTimeDelta, TimePoint as AlgTimePoint, TimeSpan as AlgTimeSpan};
 use encoding_rs::Encoding;
 use failure::ResultExt;
 use pbr::ProgressBar;
@@ -29,7 +29,7 @@ pub enum VideoFileFormat {
 
 pub struct NoProgressInfo {}
 
-impl ilass_core::ProgressHandler for NoProgressInfo {
+impl ilass::ProgressHandler for NoProgressInfo {
     fn init(&mut self, _steps: i64) {}
     fn inc(&mut self) {}
     fn finish(&mut self) {}
@@ -80,7 +80,7 @@ impl ProgressInfo {
     }
 }
 
-impl ilass_core::ProgressHandler for ProgressInfo {
+impl ilass::ProgressHandler for ProgressInfo {
     fn init(&mut self, steps: i64) {
         self.init(steps)
     }
@@ -239,7 +239,7 @@ impl SubtitleFileHandler {
 pub struct VideoFileHandler {
     //video_file_format: VideoFileFormat,
     subparse_timespans: Vec<subparse::timetypes::TimeSpan>,
-    //aligner_timespans: Vec<ilass_core::TimeSpan>,
+    //aligner_timespans: Vec<ilass::TimeSpan>,
 }
 
 impl VideoFileHandler {
@@ -400,17 +400,17 @@ impl InputFileHandler {
 }
 
 pub fn guess_fps_ratio(
-    ref_spans: &[ilass_core::TimeSpan],
-    in_spans: &[ilass_core::TimeSpan],
+    ref_spans: &[ilass::TimeSpan],
+    in_spans: &[ilass::TimeSpan],
     ratios: &[f64],
-    mut progress_handler: impl ilass_core::ProgressHandler,
-) -> (Option<usize>, ilass_core::TimeDelta) {
+    mut progress_handler: impl ilass::ProgressHandler,
+) -> (Option<usize>, ilass::TimeDelta) {
     progress_handler.init(ratios.len() as i64);
-    let (delta, score) = ilass_core::align_nosplit(
+    let (delta, score) = ilass::align_nosplit(
         ref_spans,
         in_spans,
-        ilass_core::overlap_scoring,
-        ilass_core::NoProgressHandler,
+        ilass::overlap_scoring,
+        ilass::NoProgressHandler,
     );
     progress_handler.inc();
 
@@ -420,14 +420,14 @@ pub fn guess_fps_ratio(
     let (mut opt_idx, mut opt_delta, mut opt_score) = (None, delta, score);
 
     for (scale_factor_idx, scaling_factor) in ratios.iter().cloned().enumerate() {
-        let stretched_in_spans: Vec<ilass_core::TimeSpan> =
+        let stretched_in_spans: Vec<ilass::TimeSpan> =
             in_spans.iter().map(|ts| ts.scaled(scaling_factor)).collect();
 
-        let (delta, score) = ilass_core::align_nosplit(
+        let (delta, score) = ilass::align_nosplit(
             ref_spans,
             &stretched_in_spans,
-            ilass_core::overlap_scoring,
-            ilass_core::NoProgressHandler,
+            ilass::overlap_scoring,
+            ilass::NoProgressHandler,
         );
         progress_handler.inc();
 

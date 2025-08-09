@@ -136,7 +136,7 @@ alias ilass="ilass-cli"
 
 This `cargo` workspace contains two projects:
 
-  - `ilass-core` which provides the algorithm
+  - `ilass` which provides the algorithm
   
     It is targeted at *developers* who want to use the same algorithm in their project.
 
@@ -146,7 +146,7 @@ This `cargo` workspace contains two projects:
 
 ## Library Documentation
 
-[Open README](./ilass-core/README.md) from `ilass-core`.
+[Open README](./ilass/README.md) from `ilass`.
 
 ## Notes
 

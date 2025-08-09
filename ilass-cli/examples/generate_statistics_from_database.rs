@@ -346,10 +346,10 @@ mod types {
             self.end_ms - self.start_ms
         }
 
-        pub fn to_ilass_core_spans(self, ms_per_alg_step: i64) -> ilass_core::TimeSpan {
-            ilass_core::TimeSpan::new(
-                ilass_core::TimePoint::from(self.start_ms / ms_per_alg_step),
-                ilass_core::TimePoint::from(self.end_ms / ms_per_alg_step),
+        pub fn to_ilass_core_spans(self, ms_per_alg_step: i64) -> ilass::TimeSpan {
+            ilass::TimeSpan::new(
+                ilass::TimePoint::from(self.start_ms / ms_per_alg_step),
+                ilass::TimePoint::from(self.end_ms / ms_per_alg_step),
             )
         }
 
@@ -947,11 +947,11 @@ fn align(
     scaling_factor: FixedPointNumber,
     config: &AlignConfig,
 ) -> Vec<i64> {
-    let ref_alg_spans: Vec<ilass_core::TimeSpan> = ref_spans
+    let ref_alg_spans: Vec<ilass::TimeSpan> = ref_spans
         .map(|span| span.to_ilass_core_spans(config.ms_per_alg_step))
         .collect();
 
-    let in_alg_spans: Vec<ilass_core::TimeSpan> = in_spans
+    let in_alg_spans: Vec<ilass::TimeSpan> = in_spans
         .map(|span| span.to_ilass_core_spans(config.ms_per_alg_step))
         .map(|span| span.scaled(scaling_factor.to_f64()))
         .collect();
@@ -961,11 +961,11 @@ fn align(
         AlignMode::NoSplit => {
             let num_inc_timespancs = in_alg_spans.len();
 
-            let (alg_delta, _score) = ilass_core::align_nosplit(
+            let (alg_delta, _score) = ilass::align_nosplit(
                 &ref_alg_spans,
                 &in_alg_spans,
                 get_scoring_fn(config.scoring_mode),
-                ilass_core::NoProgressHandler,
+                ilass::NoProgressHandler,
             );
             //println!("align score {}", score);
 
@@ -975,13 +975,13 @@ fn align(
             split_penalty,
             optimization,
         } => {
-            alg_deltas = ilass_core::align(
+            alg_deltas = ilass::align(
                 &ref_alg_spans,
                 &in_alg_spans,
                 split_penalty.to_f64(),
                 optimization.map(FixedPointNumber::to_f64),
                 get_scoring_fn(config.scoring_mode),
-                ilass_core::NoProgressHandler,
+                ilass::NoProgressHandler,
             )
             .0;
         }
@@ -1033,10 +1033,10 @@ fn assert_nosplit_deltas(deltas: &[i64]) -> i64 {
     delta
 }
 
-fn get_scoring_fn(scoring_mode: ScoringMode) -> impl Fn(ilass_core::TimeDelta, ilass_core::TimeDelta) -> f64 + Copy {
+fn get_scoring_fn(scoring_mode: ScoringMode) -> impl Fn(ilass::TimeDelta, ilass::TimeDelta) -> f64 + Copy {
     match scoring_mode {
-        ScoringMode::Standard => ilass_core::standard_scoring,
-        ScoringMode::Overlap => ilass_core::overlap_scoring,
+        ScoringMode::Standard => ilass::standard_scoring,
+        ScoringMode::Overlap => ilass::overlap_scoring,
     }
 }
 
@@ -1048,7 +1048,7 @@ fn compute_score(
     scaling_factor: FixedPointNumber,
     scoring_mode: ScoringMode,
 ) -> f64 {
-    ilass_core::get_nosplit_score(
+    ilass::get_nosplit_score(
         ref_spans
             .iter()
             .cloned()
@@ -1058,7 +1058,7 @@ fn compute_score(
             .cloned()
             .map(|span| span.to_ilass_core_spans(ms_per_alg_step))
             .map(|span| span.scaled(scaling_factor.to_f64()))
-            .map(|span| span + ilass_core::TimeDelta::from_i64(offset / ms_per_alg_step)),
+            .map(|span| span + ilass::TimeDelta::from_i64(offset / ms_per_alg_step)),
         get_scoring_fn(scoring_mode),
     )
 }

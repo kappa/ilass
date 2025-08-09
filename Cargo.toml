@@ -1,9 +1,5 @@
 [workspace]
-
-members = [
-    "ilass-core",
-    "ilass-cli"
-]
+members = ["ilass", "ilass-cli"]
 
 [profile.release]
 lto = true

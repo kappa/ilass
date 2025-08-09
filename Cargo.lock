@@ -218,6 +218,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ilass"
+version = "2.0.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "ilass-cli"
 version = "2.0.0"
 dependencies = [
@@ -226,7 +233,7 @@ dependencies = [
  "ctrlc",
  "encoding_rs",
  "failure",
- "ilass-core",
+ "ilass",
  "libc",
  "pbr",
  "rand",
@@ -236,13 +243,6 @@ dependencies = [
  "subparse",
  "threadpool",
  "webrtc-vad",
-]
-
-[[package]]
-name = "ilass-core"
-version = "2.0.0"
-dependencies = [
- "rand",
 ]
 
 [[package]]

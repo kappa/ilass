@@ -19,7 +19,7 @@ ffmpeg-binary = ["byteorder"]
 
 
 [dependencies]
-ilass-core = { version = "2.0.0", path = "../ilass-core" }
+ilass = { version = "2.0.0", path = "../ilass" }
 webrtc-vad = "0.4.0"
 subparse = "0.7.0"
 
