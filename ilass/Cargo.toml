@@ -1,14 +1,14 @@
 [package]
 name = "ilass"
-version = "2.1.0"
-authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
-description = "Automatic Language-Agnostic Subtitle Synchronization (Library)"
-repository = "https://github.com/SandroHc/ilass/ilass-core"
-documentation = "https://docs.rs/ilass-core"
+description = "Library for synchronizing subtitles"
+documentation = "https://docs.rs/ilass"
 readme = "README.md"
-keywords = ["subtitle", "align", "automatic", "api", "tool"]
-license = "AGPL-3"
-edition = "2018"
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [features]
 default = []

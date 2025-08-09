@@ -1,14 +1,14 @@
 [package]
 name = "ilass-cli"
-version = "2.1.0"
-authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
-description = "Automatic Language-Agnostic Subtitle Synchronization (Command Line Tool)"
-repository = "https://github.com/SandroHc/ilass"
+description = "CLI tool for synchronizing subtitles"
 documentation = "https://docs.rs/ilass-cli"
 readme = "../README.md"
-keywords = ["align", "subtitle", "automatic", "api", "tool"]
-license = "AGPL-3"
-edition = "2018"
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [[bin]]
 name = "ilass"
@@ -23,7 +23,7 @@ ffmpeg-binary = ["byteorder"]
 
 
 [dependencies]
-ilass = { version = "2.1.0", path = "../ilass" }
+ilass.workspace = true
 webrtc-vad = "0.4.0"
 subparse = "0.7.0"
 
