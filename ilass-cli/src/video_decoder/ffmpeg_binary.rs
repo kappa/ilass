@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)]
+
 use failure::{Backtrace, Context, Fail, ResultExt};
 use std::ffi::OsString;
 use std::fmt;
@@ -97,7 +99,7 @@ pub enum DecoderErrorKind {
     NoDurationInformation,
 }
 
-fn format_cmd(cmd_path: &PathBuf, args: &[OsString]) -> String {
+fn format_cmd(cmd_path: &Path, args: &[OsString]) -> String {
     let args_string: String = args
         .iter()
         .map(|x| format!("{}", x.to_string_lossy()))
@@ -200,7 +202,7 @@ impl VideoDecoderFFmpegBinary {
                 DecoderErrorKind::ExtractingMetadataFailed {
                     file_path: file_path_buf.clone(),
                     cmd_path: ffprobe_path.clone(),
-                    args: args,
+                    args,
                 }
             })?;
 
@@ -216,15 +218,14 @@ impl VideoDecoderFFmpegBinary {
                 .find(|s| s.index == ai)
         };
 
-        let best_stream: Stream;
-        match best_stream_opt {
-            Some(x) => best_stream = x,
+        let best_stream: Stream = match best_stream_opt {
+            Some(x) => x,
             None => {
                 return Err(DecoderError::from(DecoderErrorKind::NoAudioStream {
                     path: file_path.as_ref().into(),
-                }))
+                }));
             }
-        }
+        };
 
         let ffmpeg_path: PathBuf = std::env::var_os("ILASS_FFMPEG_PATH")
             .unwrap_or(OsString::from("ffmpeg"))
@@ -274,13 +275,13 @@ impl VideoDecoderFFmpegBinary {
 
         progress_handler.init(num_samples);
 
-        return Self::extract_audio_stream(receiver, progress_handler, ffmpeg_path.clone(), &args)
+        Self::extract_audio_stream(receiver, progress_handler, ffmpeg_path.clone(), &args)
             .with_context(|_| DecoderErrorKind::FailedExtractingAudio {
                 file_path: file_path_buf.clone(),
                 cmd_path: ffmpeg_path.clone(),
-                args: args,
+                args,
             })?
-            .into_ok();
+            .into_ok()
     }
 
     fn extract_audio_stream<T>(
@@ -344,7 +345,7 @@ impl VideoDecoderFFmpegBinary {
                     code @ Some(_) | code @ None => {
                         let error_code_err: DecoderErrorKind = DecoderErrorKind::ProcessErrorCode {
                             cmd_path: ffmpeg_path,
-                            code: code,
+                            code,
                         };
 
                         let mut stderr_data = Vec::new();
@@ -363,7 +364,7 @@ impl VideoDecoderFFmpegBinary {
                                 msg: stderr_str,
                             }))
                             .with_context(|_| error_code_err)
-                            .map_err(|x| DecoderError::from(x));
+                            .map_err(DecoderError::from);
                         }
                     }
                 }
@@ -384,7 +385,7 @@ impl VideoDecoderFFmpegBinary {
                             progress_prescaler_counter = 0;
                         }
 
-                        progress_prescaler_counter = progress_prescaler_counter + 1;
+                        progress_prescaler_counter += 1;
 
                         /*data2.push(sample);
                         if data2.len() == data2_cap {
@@ -428,7 +429,7 @@ impl VideoDecoderFFmpegBinary {
                     msg: stderr,
                 }))
                 .with_context(|_| err)
-                .map_err(|x| DecoderError::from(x));
+                .map_err(DecoderError::from);
             }
         }
 

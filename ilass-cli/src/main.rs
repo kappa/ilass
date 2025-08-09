@@ -32,15 +32,14 @@ fn unpack_clap_number_f64(
     parameter_name: &'static str,
 ) -> Result<f64, InputArgumentsError> {
     let parameter_value_str: &String = matches.get_one(parameter_name).unwrap();
-    f64::from_str(&parameter_value_str)
+    f64::from_str(parameter_value_str)
         .with_context(|_| {
             InputArgumentsErrorKind::ArgumentParseError {
                 argument_name: parameter_name.to_string(),
                 value: parameter_value_str.to_string(),
             }
-            .into()
         })
-        .map_err(|e| InputArgumentsError::from(e))
+        .map_err(InputArgumentsError::from)
 }
 
 /// Does reading, parsing and nice error handling for a f64 clap parameter.
@@ -55,9 +54,8 @@ fn unpack_clap_number_i64(
                 argument_name: parameter_name.to_string(),
                 value: parameter_value_str.to_string(),
             }
-            .into()
         })
-        .map_err(|e| InputArgumentsError::from(e))
+        .map_err(InputArgumentsError::from)
 }
 
 fn unpack_optional_clap_number_usize(
@@ -67,16 +65,15 @@ fn unpack_optional_clap_number_usize(
     match matches.get_one::<String>(parameter_name) {
         None => Ok(None),
         Some(parameter_value_str) => {
-            usize::from_str(&parameter_value_str)
+            usize::from_str(parameter_value_str)
                 .with_context(|_| {
                     InputArgumentsErrorKind::ArgumentParseError {
                         argument_name: parameter_name.to_string(),
                         value: parameter_value_str.to_string(),
                     }
-                    .into()
                 })
-                .map(|v| Some(v))
-                .map_err(|e| InputArgumentsError::from(e))
+                .map(Some)
+                .map_err(InputArgumentsError::from)
         }
     }
 }
@@ -220,18 +217,19 @@ fn parse_args() -> Result<Arguments, InputArgumentsError> {
     }
 
     let split_penalty: f64 = unpack_clap_number_f64(&matches, "split-penalty")?;
-    if split_penalty < 0.0 || split_penalty > 1000.0 {
+    let split_penalty_range = 0.0..=1000.0;
+    if !split_penalty_range.contains(&split_penalty) {
         return Err(InputArgumentsErrorKind::ValueNotInRange {
-            argument_name: "interval".to_string(),
+            argument_name: "split-penalty".to_string(),
             value: split_penalty,
-            min: 0.0,
-            max: 1000.0,
+            min: *split_penalty_range.start(),
+            max: *split_penalty_range.end(),
         }
         .into());
     }
 
     let speed_optimization: f64 = unpack_clap_number_f64(&matches, "speed-optimization")?;
-    if split_penalty < 0.0 {
+    if speed_optimization < 0.0 {
         return Err(InputArgumentsErrorKind::ExpectedNonNegativeNumber {
             argument_name: "speed-optimization".to_string(),
             value: speed_optimization,
@@ -375,9 +373,8 @@ fn run() -> Result<(), failure::Error> {
         args.incorrect_file_path.display(),
         args.reference_file_path.display()
     );
-    let alg_deltas;
-    if args.no_split_mode {
-        let num_inc_timespancs = inc_aligner_timespans.len();
+    let alg_deltas = if args.no_split_mode {
+        let num_inc_timespans = inc_aligner_timespans.len();
 
         let alg_delta = ilass::align_nosplit(
             &ref_aligner_timespans,
@@ -387,9 +384,9 @@ fn run() -> Result<(), failure::Error> {
         )
         .0;
 
-        alg_deltas = std::vec::from_elem(alg_delta, num_inc_timespancs);
+        std::vec::from_elem(alg_delta, num_inc_timespans)
     } else {
-        alg_deltas = align(
+        align(
             &ref_aligner_timespans,
             &inc_aligner_timespans,
             args.split_penalty,
@@ -397,8 +394,8 @@ fn run() -> Result<(), failure::Error> {
             ilass::standard_scoring,
             ProgressInfo::new(1, Some(align_start_msg)),
         )
-        .0;
-    }
+        .0
+    };
     let deltas = alg_deltas_to_timing_deltas(&alg_deltas, args.interval);
 
     // group subtitles lines which have the same offset
@@ -471,9 +468,9 @@ fn run() -> Result<(), failure::Error> {
 
             for corrected_timespan in &mut corrected_timespans {
                 if corrected_timespan.start.is_negative() {
-                    let offset = subparse::timetypes::TimePoint::from_secs(0) - corrected_timespan.start;
-                    corrected_timespan.start = corrected_timespan.start + offset;
-                    corrected_timespan.end = corrected_timespan.end + offset;
+                    let offset = TimePoint::from_secs(0) - corrected_timespan.start;
+                    corrected_timespan.start += offset;
+                    corrected_timespan.end += offset;
                 }
             }
         }
@@ -489,7 +486,7 @@ fn run() -> Result<(), failure::Error> {
     // incorrect file -> correct file
     let shifted_timespans: Vec<SubtitleEntry> = corrected_timespans
         .into_iter()
-        .map(|timespan| SubtitleEntry::from(timespan))
+        .map(SubtitleEntry::from)
         .collect();
 
     // write corrected files

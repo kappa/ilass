@@ -53,7 +53,7 @@ impl<R: AudioReceiver> AudioReceiver for ChunkedAudioReceiver<R> {
 
             samples = &samples[sample_count..];
 
-            self.filled = self.filled + sample_count;
+            self.filled += sample_count;
 
             if self.filled == self.buffer.len() {
                 self.next.push_samples(self.buffer.as_slice())?;

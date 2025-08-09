@@ -1,8 +1,10 @@
 // This file is not really meant as an example. This program in conjunction with the `../statistics-helpers/*` create the diagrams .
+#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)]
 
-use ilass_cli::*;
-use clap::{command, crate_authors, Arg};
+use clap::{Arg, command};
 use failure::{Backtrace, Context, Fail, ResultExt};
+use ilass_cli::*;
 use rmp_serde as rmps;
 use std::cmp::Ordering;
 use std::cmp::{max, min};
@@ -10,7 +12,7 @@ use std::collections::HashSet;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter};
+use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic;
@@ -80,7 +82,7 @@ impl RunningTasksInfo {
             tasks_lock
                 .tasks
                 .sort_by(|(_, task1), (_, task2)| task1.context.cmp(&task2.context));
-            tasks_lock.next_id = tasks_lock.next_id + 1;
+            tasks_lock.next_id += 1;
 
             if !self.quiet {
                 if std::time::Instant::now() - tasks_lock.last_print > std::time::Duration::from_millis(100) {
@@ -504,7 +506,7 @@ pub fn format_time(ms: i64) -> String {
 }*/
 
 fn enough_lines(sub: &[Span], idxs: impl Iterator<Item = usize>, config: &SyncClassificationConfig) -> bool {
-    if sub.len() == 0 {
+    if sub.is_empty() {
         return true;
     }
 
@@ -531,8 +533,8 @@ fn enough_lines(sub: &[Span], idxs: impl Iterator<Item = usize>, config: &SyncCl
         let start_segment = get_segment_for_ms(line.start_ms);
         let end_segment = get_segment_for_ms(line.end_ms);
 
-        for segment_idx in start_segment..=end_segment {
-            line_in_segment[segment_idx] = true;
+        for segment in line_in_segment.iter_mut().take(end_segment + 1).skip(start_segment) {
+            *segment = true;
         }
     }
 
@@ -575,7 +577,7 @@ fn get_sync_classification(
             .zip(max_unsync_counts.iter())
         {
             if offset > good_sync_requirement.at_most_offset {
-                *unsync_lines_counts = *unsync_lines_counts + 1;
+                *unsync_lines_counts += 1;
 
                 if *unsync_lines_counts > *max_unsync_count {
                     return SyncClassification::Unsynced;
@@ -603,7 +605,7 @@ fn edit_distance(a: &[char], b: &[char]) -> i32 {
     let idx = |ac: usize, bc: usize| -> usize {
         assert!(ac < alen);
         assert!(bc < blen);
-        return bc * alen + ac;
+        bc * alen + ac
     };
 
     for ac in 0..alen {
@@ -620,8 +622,8 @@ fn edit_distance(a: &[char], b: &[char]) -> i32 {
                 score[idx(ac, bc)] = score[idx(ac - 1, bc - 1)];
             } else {
                 let s1 = score[idx(ac - 1, bc - 1)];
-                let s2 = score[idx(ac - 1, bc - 0)];
-                let s3 = score[idx(ac - 0, bc - 1)];
+                let s2 = score[idx(ac - 1, bc)];
+                let s3 = score[idx(ac, bc - 1)];
                 score[idx(ac, bc)] = min(s1, min(s2, s3)) + 1;
             }
         }
@@ -635,12 +637,9 @@ fn similarity(a: &str, b: &str) -> f32 {
     let bc = &b.chars().collect::<Vec<char>>();
 
     let len = max(ac.len(), bc.len()) as i32;
-    let changes = edit_distance(&ac, &bc);
+    let changes = edit_distance(ac, bc);
 
-    let r = (len - changes) as f32 / len as f32;
-
-    //println!("{} =? {} -> {}", a, b, r);
-    r
+    (len - changes) as f32 / len as f32
 }
 
 fn get_line_pairs(a: &[database::LineInfo], b: &[database::LineInfo], config: &LineMatchingConfig) -> LinePairs {
@@ -664,7 +663,7 @@ fn get_line_pairs(a: &[database::LineInfo], b: &[database::LineInfo], config: &L
     let idx = |ac: usize, bc: usize| -> usize {
         assert!(ac < alen);
         assert!(bc < blen);
-        return bc * alen + ac;
+        bc * alen + ac
     };
 
     let origin_similarity = similarity(&a[0].text, &b[0].text);
@@ -697,8 +696,8 @@ fn get_line_pairs(a: &[database::LineInfo], b: &[database::LineInfo], config: &L
                 new_score.1 = similarity;
                 new_score.2 = Some(BestChoice::Match);
             } else {
-                let score_push_a = score[idx(ai - 1, bi - 0)].0;
-                let score_push_b = score[idx(ai - 0, bi - 1)].0;
+                let score_push_a = score[idx(ai - 1, bi)].0;
+                let score_push_b = score[idx(ai, bi - 1)].0;
                 let score_mismatch = score[idx(ai - 1, bi - 1)].0;
 
                 if score_push_a >= score_push_b && score_push_a >= score_mismatch {
@@ -955,8 +954,7 @@ fn align(
         .map(|span| span.scaled(scaling_factor.to_f64()))
         .collect();
 
-    let alg_deltas;
-    match config.align_mode {
+    let alg_deltas = match config.align_mode {
         AlignMode::NoSplit => {
             let num_inc_timespancs = in_alg_spans.len();
 
@@ -968,13 +966,13 @@ fn align(
             );
             //println!("align score {}", score);
 
-            alg_deltas = vec![alg_delta; num_inc_timespancs];
+            vec![alg_delta; num_inc_timespancs]
         }
         AlignMode::Split {
             split_penalty,
             optimization,
         } => {
-            alg_deltas = ilass::align(
+            ilass::align(
                 &ref_alg_spans,
                 &in_alg_spans,
                 split_penalty.to_f64(),
@@ -982,9 +980,9 @@ fn align(
                 get_scoring_fn(config.scoring_mode),
                 ilass::NoProgressHandler,
             )
-            .0;
+            .0
         }
-    }
+    };
 
     alg_deltas_to_timing_deltas(&alg_deltas, config.ms_per_alg_step)
         .into_iter()
@@ -1014,7 +1012,7 @@ impl CorrectionInfo {
         let mut r = 0;
         for (d1, d2) in self.deltas.iter().zip(self.deltas.iter().skip(1)) {
             if d1 != d2 {
-                r = r + 1;
+                r += 1;
             }
         }
 
@@ -1194,12 +1192,10 @@ fn compute_sync_deltas(
     conf: &AlignConfig,
     use_cache: bool,
 ) -> CorrectionInfo {
-    let scaling_factor: FixedPointNumber; // = FixedPointNumber::one();
-
-    match conf.scaling_correct_mode {
-        ScalingCorrectMode::None => scaling_factor = FixedPointNumber::one(),
+    let scaling_factor: FixedPointNumber = match conf.scaling_correct_mode {
+        ScalingCorrectMode::None => FixedPointNumber::one(),
         ScalingCorrectMode::Advanced => {
-            scaling_factor = guess_scaling_factor(
+            guess_scaling_factor(
                 ref_config.clone(),
                 ref_spans,
                 in_sub_id,
@@ -1209,7 +1205,7 @@ fn compute_sync_deltas(
                 use_cache,
             )
         }
-    }
+    };
 
     let cached_deltas_opt: Option<Vec<i64>> = {
         if use_cache {
@@ -1273,9 +1269,9 @@ fn update_statistics_with_alignment(
     }
 
     let video_sync_classification = get_sync_classification(
-        &ref_sub_spans,
+        ref_sub_spans,
         &out_video_spans,
-        &line_pairs,
+        line_pairs,
         &config.sync_classification_config,
     );
     statistics
@@ -1359,8 +1355,8 @@ fn iterate_movies<'a>(database: &'a TDatabase) -> impl Iterator<Item = (TMovie, 
             movie.clone(),
             Arc::new(ProgressContext::Movie(MovieProgressContext {
                 movie_id: movie.id.clone(),
-                movie_nr: movie_nr,
-                total_movie_count: total_movie_count,
+                movie_nr,
+                total_movie_count,
             })),
         )
     })
@@ -1384,19 +1380,19 @@ fn iterate_movie_subs_with_ref_sub(
             let progress_info = ProgressContext::SubtitleForMovie(
                 MovieProgressContext {
                     movie_id: movie.id.clone(),
-                    movie_nr: movie_nr,
-                    total_movie_count: total_movie_count,
+                    movie_nr,
+                    total_movie_count,
                 },
                 SubtitleProgressContext {
                     sub_id: in_subtitle.id(),
                     sub_nr: subtitle_nr,
-                    total_sub_nr: total_sub_nr,
-                    movie_sub_count: movie_sub_count,
-                    total_sub_count: total_sub_count,
+                    total_sub_nr,
+                    movie_sub_count,
+                    total_sub_count,
                 },
             );
 
-            total_sub_nr = total_sub_nr + 1;
+            total_sub_nr += 1;
 
             result.push((
                 movie.clone(),
@@ -1438,7 +1434,7 @@ fn compute_sync_offsets(
 
     let out_spans = correction.apply_to(in_spans);
 
-    get_offsets(&ref_sub_spans, &out_spans, &line_pairs)
+    get_offsets(ref_sub_spans, &out_spans, line_pairs)
 }
 
 fn run() -> Result<(), TopLevelError> {
@@ -1683,12 +1679,12 @@ fn run() -> Result<(), TopLevelError> {
     let ignored_movies: HashSet<String> = matches
         .get_many::<String>("ignore-movie")
         .map(|v| v.cloned().collect::<HashSet<String>>())
-        .unwrap_or_else(|| HashSet::new());
+        .unwrap_or_else(HashSet::new);
 
     let ignored_subs: HashSet<String> = matches
         .get_many::<String>("ignore-sub")
         .map(|v| v.cloned().collect::<HashSet<String>>())
-        .unwrap_or_else(|| HashSet::new());
+        .unwrap_or_else(HashSet::new);
 
     let only_every_nth_sub: Option<usize> = matches.get_one("only-every-nth-sub").cloned();
 
@@ -1711,20 +1707,18 @@ fn run() -> Result<(), TopLevelError> {
     if clean_cache {
         cache = cache::Root::default();
         println!("Cleaning cache as requested by user...");
-    } else {
-        if let Some(cache_dir) = &cache_dir {
-            let cache_file_path = cache_dir.join("cache.dat");
-            if cache_file_path.exists() {
-                let file = File::open(cache_file_path).expect("cache file not found");
-                let file_reader = BufReader::with_capacity(1024, file);
-                cache = rmps::from_read(file_reader).expect("error while reading chache file");
-            } else {
-                cache = cache::Root::default();
-                println!("`{}` not found - creating cache file...", cache_file_path.display());
-            }
+    } else if let Some(cache_dir) = &cache_dir {
+        let cache_file_path = cache_dir.join("cache.dat");
+        if cache_file_path.exists() {
+            let file = File::open(cache_file_path).expect("cache file not found");
+            let file_reader = BufReader::with_capacity(1024, file);
+            cache = rmps::from_read(file_reader).expect("error while reading chache file");
         } else {
             cache = cache::Root::default();
+            println!("`{}` not found - creating cache file...", cache_file_path.display());
         }
+    } else {
+        cache = cache::Root::default();
     }
 
     if clean_cache_line_pairs {
@@ -1767,13 +1761,13 @@ fn run() -> Result<(), TopLevelError> {
         certain_match_similarity: FixedPointNumber::from_f64(0.8),
     };
 
-    assert!(max_good_sync_offsets.len() == required_good_sync_spans_percentages.len());
+    assert_eq!(max_good_sync_offsets.len(), required_good_sync_spans_percentages.len());
 
     let default_sync_classificiation_conf = SyncClassificationConfig {
         required_segments_for_sync_classification: 10,
         good_sync_requirements: max_good_sync_offsets
             .into_iter()
-            .zip(required_good_sync_spans_percentages.into_iter())
+            .zip(required_good_sync_spans_percentages)
             .map(|(max_offset, percentage)| GoodSyncRequirement {
                 at_least_proportion_of_all_subs: FixedPointNumber::from_f64(percentage / 100.0),
                 at_most_offset: max_offset,
@@ -1803,18 +1797,10 @@ fn run() -> Result<(), TopLevelError> {
     };
 
     if let Some(only_movies) = only_movies_opt {
-        database.movies = database
-            .movies
-            .into_iter()
-            .filter(|movie| only_movies.contains(&movie.id))
-            .collect();
+        database.movies.retain(|movie| only_movies.contains(&movie.id));
     }
 
-    database.movies = database
-        .movies
-        .into_iter()
-        .filter(|movie| !ignored_movies.contains(&movie.id))
-        .collect();
+    database.movies.retain(|movie| !ignored_movies.contains(&movie.id));
 
     if let Some(only_subtitles) = only_subtitles_opt {
         for movie in &mut database.movies {
@@ -1858,7 +1844,7 @@ fn run() -> Result<(), TopLevelError> {
                     i += 1;
                 }
 
-                nth = nth + 1;
+                nth += 1;
             }
         }
     }
@@ -1892,14 +1878,13 @@ fn run() -> Result<(), TopLevelError> {
 
                 let vad_span_opt = tasks_info.run("perform vad", progress_info, || perform_vad(&movie, cache.clone()));
 
-                let vad_spans: Vec<Span>;
-                match vad_span_opt {
-                    Ok(v) => vad_spans = v,
+                let vad_spans: Vec<Span> = match vad_span_opt {
+                    Ok(v) => v,
                     Err(e) => {
                         print_ignore_error_for_movie(e, &movie);
                         return;
                     }
-                }
+                };
 
                 {
                     let mut statistics = statistics.lock().unwrap();
@@ -1993,17 +1978,14 @@ fn run() -> Result<(), TopLevelError> {
                 ) != FixedPointNumber::one()
                 {
                     let mut statistics = statistics.lock().unwrap();
-                    statistics.general.required_framerate_adjustments =
-                        statistics.general.required_framerate_adjustments + 1;
+                    statistics.general.required_framerate_adjustments += 1;
                 }
 
                 {
                     let mut statistics = statistics.lock().unwrap();
                     // lines are counted on the reference subtitle as well as on the input subtitle
-                    (*statistics).general.used_line_candidates =
-                        statistics.general.used_line_candidates + 2 * line_pairs.len();
-                    (*statistics).general.total_line_candidates =
-                        statistics.general.total_line_candidates + ref_subtitle.data.len() + in_subtitle.data.len();
+                    statistics.general.used_line_candidates += 2 * line_pairs.len();
+                    statistics.general.total_line_candidates += ref_subtitle.data.len() + in_subtitle.data.len();
                 }
 
                 if distance_histogram_includes_synced_subtitles
@@ -2071,7 +2053,7 @@ fn run() -> Result<(), TopLevelError> {
                     return;
                 }
 
-                if line_pairs.len() > 0 {
+                if !line_pairs.is_empty() {
                     let sub_sync_correction = compute_sync_deltas(
                         RefConfig::Subtitle(ref_subtitle.id()),
                         &vad_spans,
@@ -2126,13 +2108,13 @@ fn run() -> Result<(), TopLevelError> {
                         num_video_sync_splits: video_sync_correction.count_splits(),
                         num_sub_sync_splits: sub_sync_correction.count_splits(),
 
-                        raw_sync_classification: raw_sync_classification,
-                        video_sync_classification: video_sync_classification,
-                        sub_sync_classification: sub_sync_classification,
+                        raw_sync_classification,
+                        video_sync_classification,
+                        sub_sync_classification,
 
-                        raw_offsets: raw_offsets,
-                        video_sync_offsets: video_sync_offsets,
-                        sub_sync_offsets: sub_sync_offsets,
+                        raw_offsets,
+                        video_sync_offsets,
+                        sub_sync_offsets,
                     };
 
                     statistics.lock().unwrap().offset_by_subtitle.push(offset_by_subtitle);
@@ -2254,7 +2236,7 @@ fn run() -> Result<(), TopLevelError> {
                         return;
                     }
 
-                    let mut custom_vad_config = config.vad_config.clone();
+                    let mut custom_vad_config = config.vad_config;
                     custom_vad_config.min_span_length_ms = min_span_length;
                     let custom_vad_spans = custom_vad_config.applied_to(&vad_spans_raw);
 
@@ -2398,7 +2380,7 @@ fn run() -> Result<(), TopLevelError> {
                                     .all_configurations_offset_histogram
                                     .inner_mut()
                                     .entry(algorithm_conf)
-                                    .or_insert_with(|| statistics::Histogram::default())
+                                    .or_default()
                                     .merge_from(&histogram);
                             }
                         }
@@ -2425,12 +2407,12 @@ fn run() -> Result<(), TopLevelError> {
             }
         }*/
 
-        println!("");
+        println!();
         println!("Done computing!");
         println!("Writing cache...");
 
         if let Some(cache_dir) = &cache_dir {
-            std::fs::create_dir_all(&cache_dir).expect("failed to create cache dir");
+            std::fs::create_dir_all(cache_dir).expect("failed to create cache dir");
 
             let file = File::create(cache_dir.join("cache.dat")).expect("cache file not found");
             let mut file_write = BufWriter::with_capacity(1024, file);
@@ -2638,7 +2620,7 @@ mod statistics {
             let len = v.len();
             Ok(BoxPlotData {
                 min: v[0],
-                perc1: v[(len * 1) / 100],
+                perc1: v[len / 100],
                 perc10: v[(len * 10) / 100],
                 median: v[len / 2],
                 avg: total / len as i64,
@@ -2836,13 +2818,13 @@ mod statistics {
         pub fn insert(&mut self, sc: super::SyncClassification) {
             match sc {
                 super::SyncClassification::Synced => {
-                    self.synced = self.synced + 1;
+                    self.synced += 1;
                 }
                 super::SyncClassification::Unsynced => {
-                    self.unsynced = self.unsynced + 1;
+                    self.unsynced += 1;
                 }
                 super::SyncClassification::Unknown => {
-                    self.unknown = self.unknown + 1;
+                    self.unknown += 1;
                 }
             }
         }
@@ -2944,7 +2926,7 @@ mod database {
                 result.push(&movie.reference_subtitle);
 
                 for subtitle in &movie.subtitles {
-                    result.push(&subtitle);
+                    result.push(subtitle);
                 }
             }
             result.into_iter()

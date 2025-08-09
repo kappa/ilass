@@ -74,10 +74,6 @@ pub use rating_i64::*;
 
         #[inline]
         fn as_f64(self) -> f64;
-
-        #[inline]
-        fn as_readable_f32(self) -> f32;
-
     }
     impl RatingExt for Rating {
         #[inline]
@@ -94,11 +90,6 @@ pub use rating_i64::*;
         #[inline]
         fn as_f64(self) -> f64 {
             self.into_inner()
-        }
-
-        #[inline]
-        fn as_readable_f32(self) -> f32 {
-            self.into_inner() as f32
         }
     }
 
@@ -156,37 +147,18 @@ mod rating_i64 {
             0
         }
 
-        fn is_zero(self) -> bool;
-
         #[inline]
         fn div_by_delta_to_i64(r: Rating, other: RatingDelta) -> i64 {
             r / other
         }
 
-        #[inline]
-        fn div_by_i64_to_delta(r: Rating, other: i64) -> RatingDelta {
-            r / other
-        }
-
-        fn as_readable_f32(self) -> f32;
-
-        fn as_readable_f64(self) -> f64;
+        fn as_readable_f64(&self) -> f64;
     }
 
     impl RatingExt for Rating {
         #[inline]
-        fn is_zero(self) -> bool {
-            self == 0
-        }
-
-        #[inline]
-        fn as_readable_f32(self) -> f32 {
-            self as f32 / RATING_PRECISION as f32
-        }
-
-        #[inline]
-        fn as_readable_f64(self) -> f64 {
-            self as f64 / RATING_PRECISION as f64
+        fn as_readable_f64(&self) -> f64 {
+            *self as f64 / RATING_PRECISION as f64
         }
     }
 

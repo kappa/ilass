@@ -1,5 +1,4 @@
 use crate::{TimeDelta, TimeSpan};
-use std;
 use std::cmp::max;
 
 fn prepare_spans_sorted(overlapping: &[TimeSpan]) -> (Vec<TimeSpan>, Vec<usize>) {
@@ -151,10 +150,10 @@ mod tests {
                 continue;
             }
 
-            if time_spans.len() == 0 {
+            if time_spans.is_empty() {
                 continue;
             }
-            assert!(non_overlapping.len() > 0);
+            assert!(!non_overlapping.is_empty());
 
             // test whether some spans overlap (they shouldn't)
             non_overlapping

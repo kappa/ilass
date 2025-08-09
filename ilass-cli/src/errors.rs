@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)]
+
 use failure::{Backtrace, Context, Fail};
 use std::fmt;
 use std::path::PathBuf;
@@ -57,7 +59,7 @@ macro_rules! define_error {
 
         impl From<Context<$errorKind>> for $error {
             fn from(inner: Context<$errorKind>) -> $error {
-                $error { inner: inner }
+                $error { inner }
             }
         }
     };

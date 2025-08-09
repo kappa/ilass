@@ -81,7 +81,7 @@ pub fn align_nosplit(
     progress_handler.inc();
     progress_handler.finish();
 
-    return (delta, score.as_readable_f64());
+    (delta, score.as_readable_f64())
 }
 
 /// Matches an `incorrect` subtitle list to a `reference` subtitle list.
@@ -111,8 +111,8 @@ pub fn align(
     score_fn: impl Fn(TimeDelta, TimeDelta) -> f64 + Copy,
     progress_handler: impl ProgressHandler,
 ) -> (Vec<TimeDelta>, f64) {
-    let (list_nonoverlapping, list_indices) = prepare_time_spans(&list);
-    let (ref_nonoverlapping, _) = prepare_time_spans(&reference);
+    let (list_nonoverlapping, list_indices) = prepare_time_spans(list);
+    let (ref_nonoverlapping, _) = prepare_time_spans(reference);
 
     if list_nonoverlapping.is_empty() || ref_nonoverlapping.is_empty() {
         return (vec![TimeDelta::zero(); list.len()], 0.);
@@ -217,8 +217,7 @@ fn get_nosplit_rating_iter(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prepare_time_spans, TimePoint};
-    use rand;
+    use crate::{TimePoint, prepare_time_spans};
     use rand::RngCore;
 
     /// Some special time span sequences.
@@ -263,7 +262,7 @@ mod tests {
     pub fn get_test_time_spans() -> Vec<Vec<TimeSpan>> {
         (0..1000)
             .map(|_| generate_random_time_spans())
-            .chain(predefined_time_spans().into_iter())
+            .chain(predefined_time_spans())
             .collect()
     }
 

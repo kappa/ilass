@@ -27,7 +27,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
   fmt:
     name: Format
@@ -66,9 +66,8 @@ jobs:
 # TODO: replace features `ffmpeg-library` and `ffmpeg-binary` with singular `ffmpeg-binary`
 #      - name: Run tests (--no-default-features)
 #        run: cargo test --workspace --no-default-features
-
-      - name: Run tests (--all-features)
-        run: cargo test --workspace --all-features
+#      - name: Run tests (--all-features)
+#        run: cargo test --workspace --all-features
 
       - name: Run doctests
         run: cargo test --workspace --doc

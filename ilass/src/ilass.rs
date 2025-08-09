@@ -35,8 +35,8 @@ pub struct Aligner;
 
 impl Aligner {
     pub fn get_offsets_bounds(ref_spans: &[TimeSpan], in_spans: &[TimeSpan]) -> (TimeDelta, TimeDelta) {
-        assert!(ref_spans.len() > 0);
-        assert!(in_spans.len() > 0);
+        assert!(!ref_spans.is_empty());
+        assert!(!in_spans.is_empty());
 
         let in_start: TimePoint = (*in_spans.first().unwrap()).start();
         let in_end: TimePoint = (*in_spans.last().unwrap()).end();
@@ -71,7 +71,7 @@ impl Aligner {
                 #[inline(always)]
                 fn accum(d: &mut [RatingDeltaDelta], idx: TimeDelta, x: RatingDeltaDelta, sigma_min: TimeDelta) {
                     let idx: usize = (idx - sigma_min).as_i64().try_into().unwrap();
-                    d[idx] = d[idx] + x;
+                    d[idx] += x;
                 }
 
                 accum(
@@ -130,9 +130,9 @@ impl Aligner {
             (self.list.len() * self.reference.len() * 4) as f64 / len as f64 * 100.0
         );*/
 
-        assert!(Rating::is_zero(rating));
+        assert_eq!(rating, 0);
 
-        return (maximum.1, maximum.0);
+        (maximum.1, maximum.0)
     }
 
     pub fn align_constant_delta(
@@ -166,8 +166,8 @@ impl Aligner {
         impl DeltaCorrect {
             fn new(rating: RatingDeltaDelta, time: TimeDelta) -> DeltaCorrect {
                 DeltaCorrect {
-                    rating: rating,
-                    time: time,
+                    rating,
+                    time,
                 }
             }
         }
@@ -236,7 +236,7 @@ impl Aligner {
 
         #[cfg(not(feature = "nosplit-heap-sort"))]
         {
-            all_delta_corrects = delta_corrects.into_iter().flat_map(|dc| dc).collect();
+            all_delta_corrects = delta_corrects.into_iter().flatten().collect();
             all_delta_corrects.sort_unstable_by_key(|dc| dc.time);
 
             first_delta_correct = all_delta_corrects
@@ -321,24 +321,16 @@ impl Aligner {
             .clone()
             .zip(sorted_delta_corrects_iter.skip(1))
         {
-            //println!("rating: {}", rating);
-            delta = delta + delta_correct.rating;
+            delta += delta_correct.rating;
             rating = Rating::add_mul(rating, delta, next_delta_correct.time - delta_correct.time);
             if rating > maximum.0 {
                 maximum = (rating, next_delta_correct.time);
             }
         }
 
-        assert!(Rating::is_zero(rating));
+        assert_eq!(rating, 0);
 
-        return (maximum.1, maximum.0);
-    }
-
-    #[cfg(feature = "statistics")]
-    pub fn do_statistics(&self, f: impl Fn(&mut Statistics) -> std::io::Result<()>) {
-        if let Some(statistics) = &self.statistics {
-            f(&mut statistics.borrow_mut()).expect("failed to write statistics");
-        }
+        (maximum.1, maximum.0)
     }
 
     pub fn align_with_splits(
@@ -351,12 +343,12 @@ impl Aligner {
     ) -> (Vec<TimeDelta>, Rating) {
         // For each segment the full rating can only be 1. So the maximum rating
         // without the split penalty is `min(list.len(), reference.len())`. So to get
-        // from the normalized rating `[0, 1]` to a unnormalized rating (where only
-        // values between `[0, max_rating]` are interesting) we multiply by
+        // from the normalized rating `[0, 1]` to an unnormalized rating (where only
+        // values between `[0, max_rating]` are interesting), we multiply by
         // `min(list.len(), reference.len())`.
 
-        assert!(in_spans.len() > 0);
-        assert!(ref_spans.len() > 0);
+        assert!(!in_spans.is_empty());
+        assert!(!ref_spans.is_empty());
 
         progress_handler.init(in_spans.len() as i64);
 
@@ -434,7 +426,7 @@ impl Aligner {
         // ------------------------------------------------------------------------------
         // Extract the best offset for each incorrect span from offset buffers
 
-        assert!(offset_buffers.len() == in_spans.len() - 1);
+        assert_eq!(offset_buffers.len(), in_spans.len() - 1);
 
         let (total_rating, mut span_offset) = culmulative_rating_buffer.maximum();
 
@@ -478,7 +470,6 @@ impl Aligner {
     ///
     /// This function has O(n) runtime, where n is the number of spans in the
     /// reference list.
-
     fn single_span_ratings(
         ref_spans: &[TimeSpan],
         in_span: TimeSpan,
@@ -513,8 +504,8 @@ impl Aligner {
         for (i, &ref_span) in ref_spans.iter().enumerate() {
             let rise_delta = RatingDelta::compute_rating_delta(ref_span.len(), in_span.len(), score_fn);
 
-            timepoints[0 * len + i] = Some((ref_span.start() - in_span.end(), rise_delta));
-            timepoints[1 * len + i] = Some((ref_span.end() - in_span.end(), -rise_delta));
+            timepoints[i] = Some((ref_span.start() - in_span.end(), rise_delta));
+            timepoints[len + i] = Some((ref_span.end() - in_span.end(), -rise_delta));
             timepoints[2 * len + i] = Some((ref_span.start() - in_span.start(), -rise_delta));
             timepoints[3 * len + i] = Some((ref_span.end() - in_span.start(), rise_delta));
         }
@@ -536,28 +527,28 @@ impl Aligner {
                 if bi == b.len() {
                     while ai < a.len() {
                         result.push(a[ai]);
-                        ai = ai + 1;
+                        ai += 1;
                     }
                     return result;
                 }
                 if ai == a.len() {
                     while bi < b.len() {
                         result.push(b[bi]);
-                        bi = bi + 1;
+                        bi += 1;
                     }
                     return result;
                 }
                 if a[ai].0 <= b[bi].0 {
                     result.push(a[ai]);
-                    ai = ai + 1;
+                    ai += 1;
                 } else {
                     result.push(b[bi]);
-                    bi = bi + 1;
+                    bi += 1;
                 }
             }
         }
 
-        let x = merge(&timepoints[len * 0..len * 1], &timepoints[len * 1..len * 2]);
+        let x = merge(&timepoints[0..len], &timepoints[len..len * 2]);
         let y = merge(&timepoints[len * 2..len * 3], &timepoints[len * 3..len * 4]);
 
         let timepoints = merge(&x, &y);
@@ -634,7 +625,7 @@ mod tests {
                         .into_iter()
                         .last()
                         .unwrap();
-                assert!(Rating::is_zero(last.end_rating()));
+                assert_eq!(last.end_rating(), 0);
                 //assert_eq!(dbg!(last.data.delta), RatingDelta::zero());
             }
         }

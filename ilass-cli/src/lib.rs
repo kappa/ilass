@@ -3,7 +3,6 @@ use encoding_rs::Encoding;
 use failure::ResultExt;
 use pbr::ProgressBar;
 use std::cmp::{max, min};
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -47,7 +46,7 @@ pub struct ProgressInfo {
 impl ProgressInfo {
     pub fn new(prescaler: i64, init_msg: Option<String>) -> ProgressInfo {
         ProgressInfo {
-            init_msg: init_msg,
+            init_msg,
             prescaler,
             counter: 0,
             progress_bar: None,
@@ -64,7 +63,7 @@ impl ProgressInfo {
     }
 
     fn inc(&mut self) {
-        self.counter = self.counter + 1;
+        self.counter += 1;
         if self.counter == self.prescaler {
             self.progress_bar.as_mut().unwrap().inc();
             self.counter = 0;
@@ -100,7 +99,7 @@ impl video_decoder::ProgressHandler for ProgressInfo {
     }
 }
 
-pub fn read_file_to_bytes(path: &Path) -> std::result::Result<Vec<u8>, FileOperationError> {
+pub fn read_file_to_bytes(path: &Path) -> Result<Vec<u8>, FileOperationError> {
     let mut file = File::open(path).with_context(|_| FileOperationErrorKind::FileOpen {
         path: path.to_path_buf(),
     })?;
@@ -112,7 +111,7 @@ pub fn read_file_to_bytes(path: &Path) -> std::result::Result<Vec<u8>, FileOpera
     Ok(v)
 }
 
-pub fn write_data_to_file(path: &Path, d: Vec<u8>) -> std::result::Result<(), FileOperationError> {
+pub fn write_data_to_file(path: &Path, d: Vec<u8>) -> Result<(), FileOperationError> {
     let mut file = File::create(path).with_context(|_| FileOperationErrorKind::FileOpen {
         path: path.to_path_buf(),
     })?;
@@ -184,7 +183,7 @@ pub enum InputFileHandler {
 pub struct SubtitleFileHandler {
     file_format: subparse::SubtitleFormat,
     subtitle_file: SubtitleFile,
-    subparse_timespans: Vec<subparse::timetypes::TimeSpan>,
+    subparse_timespans: Vec<TimeSpan>,
 }
 
 impl SubtitleFileHandler {
@@ -193,7 +192,7 @@ impl SubtitleFileHandler {
         sub_encoding: Option<&'static Encoding>,
         sub_fps: f64,
     ) -> Result<SubtitleFileHandler, InputSubtitleError> {
-        let sub_data = read_file_to_bytes(file_path.as_ref())
+        let sub_data = read_file_to_bytes(file_path)
             .with_context(|_| InputSubtitleErrorKind::ReadingSubtitleFileFailed(file_path.to_path_buf()))?;
 
         let file_format = get_subtitle_format_err(file_path.extension(), &sub_data)
@@ -202,18 +201,18 @@ impl SubtitleFileHandler {
         let parsed_subtitle_data: SubtitleFile = parse_bytes(file_format, &sub_data, sub_encoding, sub_fps)
             .with_context(|_| InputSubtitleErrorKind::ParsingSubtitleFailed(file_path.to_path_buf()))?;
 
-        let subparse_timespans: Vec<subparse::timetypes::TimeSpan> = parsed_subtitle_data
+        let subparse_timespans: Vec<TimeSpan> = parsed_subtitle_data
             .get_subtitle_entries()
             .with_context(|_| InputSubtitleErrorKind::RetreivingSubtitleLinesFailed(file_path.to_path_buf()))?
             .into_iter()
             .map(|subentry| subentry.timespan)
-            .map(|timespan: subparse::timetypes::TimeSpan| {
+            .map(|timespan: TimeSpan| {
                 TimeSpan::new(min(timespan.start, timespan.end), max(timespan.start, timespan.end))
             })
             .collect();
 
         Ok(SubtitleFileHandler {
-            file_format: file_format,
+            file_format,
             subparse_timespans,
             subtitle_file: parsed_subtitle_data,
         })
@@ -223,7 +222,7 @@ impl SubtitleFileHandler {
         self.file_format
     }
 
-    pub fn timespans(&self) -> &[subparse::timetypes::TimeSpan] {
+    pub fn timespans(&self) -> &[TimeSpan] {
         self.subparse_timespans.as_slice()
     }
 
@@ -234,12 +233,12 @@ impl SubtitleFileHandler {
 
 pub struct VideoFileHandler {
     //video_file_format: VideoFileFormat,
-    subparse_timespans: Vec<subparse::timetypes::TimeSpan>,
+    subparse_timespans: Vec<TimeSpan>,
     //aligner_timespans: Vec<ilass::TimeSpan>,
 }
 
 impl VideoFileHandler {
-    pub fn from_cache(timespans: Vec<subparse::timetypes::TimeSpan>) -> VideoFileHandler {
+    pub fn from_cache(timespans: Vec<TimeSpan>) -> VideoFileHandler {
         VideoFileHandler {
             subparse_timespans: timespans,
         }
@@ -288,17 +287,17 @@ impl VideoFileHandler {
 
         let chunk_processor = video_decoder::ChunkedAudioReceiver::new(80, vad_processor);
 
-        let vad_buffer = video_decoder::VideoDecoder::decode(file_path, audio_index, chunk_processor, video_decode_progress)
+      let vad_buffer = video_decoder::VideoDecoder::decode(file_path, audio_index, chunk_processor, video_decode_progress)
             .with_context(|_| InputVideoErrorKind::FailedToDecode {
                 path: PathBuf::from(file_path),
             })?;
 
         let mut voice_segments: Vec<(i64, i64)> = Vec::new();
-        let mut voice_segment_start: i64 = 0;
+        let mut voice_segment_start = 0;
 
-        let combine_with_distance_lower_than = 0 / 10;
+        let combine_with_distance_lower_than = 0;
 
-        let mut last_segment_end: i64 = 0;
+        let mut last_segment_end = 0;
         let mut already_saved_span = true;
 
         for (i, is_voice_segment) in vad_buffer.into_iter().chain(std::iter::once(false)).enumerate() {
@@ -319,12 +318,12 @@ impl VideoFileHandler {
             }
         }
 
-        let subparse_timespans: Vec<subparse::timetypes::TimeSpan> = voice_segments
+        let subparse_timespans: Vec<TimeSpan> = voice_segments
             .into_iter()
             .map(|(start, end)| {
-                subparse::timetypes::TimeSpan::new(
-                    subparse::timetypes::TimePoint::from_msecs(start * 10),
-                    subparse::timetypes::TimePoint::from_msecs(end * 10),
+                TimeSpan::new(
+                    TimePoint::from_msecs(start * 10),
+                    TimePoint::from_msecs(end * 10),
                 )
             })
             .collect();
@@ -344,7 +343,7 @@ impl VideoFileHandler {
             .collect();
     }
 
-    pub fn timespans(&self) -> &[subparse::timetypes::TimeSpan] {
+    pub fn timespans(&self) -> &[TimeSpan] {
         self.subparse_timespans.as_slice()
     }
 }
@@ -357,21 +356,19 @@ impl InputFileHandler {
         sub_fps: f64,
         video_decode_progress: impl video_decoder::ProgressHandler,
     ) -> Result<InputFileHandler, InputFileError> {
-        let known_subitle_endings: [&str; 6] = ["srt", "vob", "idx", "ass", "ssa", "sub"];
-
-        let extension: Option<&OsStr> = file_path.extension();
-
-        for &subtitle_ending in known_subitle_endings.iter() {
-            if extension == Some(OsStr::new(subtitle_ending)) {
+        if let Some(extension) = file_path.extension().map(|os_str| os_str.to_string_lossy()) {
+            let known_extensions = ["srt", "vob", "idx", "ass", "ssa", "sub"];
+            if known_extensions.contains(&extension.as_ref()) {
                 return Ok(SubtitleFileHandler::open_sub_file(file_path, sub_encoding, sub_fps)
-                    .map(|v| InputFileHandler::Subtitle(v))
+                    .map(InputFileHandler::Subtitle)
                     .with_context(|_| InputFileErrorKind::SubtitleFile(file_path.to_path_buf()))?);
             }
         }
 
-        return Ok(VideoFileHandler::open_video_file(file_path, audio_index, video_decode_progress)
-            .map(|v| InputFileHandler::Video(v))
-            .with_context(|_| InputFileErrorKind::VideoFile(file_path.to_path_buf()))?);
+        // Did not match any subtitle extensions we support, assume it's a video file.
+        Ok(VideoFileHandler::open_video_file(file_path, audio_index, video_decode_progress)
+            .map(InputFileHandler::Video)
+            .with_context(|_| InputFileErrorKind::VideoFile(file_path.to_path_buf()))?)
     }
 
     pub fn into_subtitle_file(self) -> Option<SubtitleFile> {
@@ -381,7 +378,7 @@ impl InputFileHandler {
         }
     }
 
-    pub fn timespans(&self) -> &[subparse::timetypes::TimeSpan] {
+    pub fn timespans(&self) -> &[TimeSpan] {
         match self {
             InputFileHandler::Video(video_handler) => video_handler.timespans(),
             InputFileHandler::Subtitle(sub_handler) => sub_handler.timespans(),
@@ -445,7 +442,7 @@ pub fn print_error_chain(error: failure::Error) {
     let show_bt_opt = std::env::vars()
         .find(|(key, _)| key == "RUST_BACKTRACE")
         .map(|(_, value)| value);
-    let show_bt = show_bt_opt != None && show_bt_opt != Some("0".to_string());
+    let show_bt = show_bt_opt.is_some() && show_bt_opt != Some("0".to_string());
 
     println!("error: {}", error);
     if show_bt {
@@ -454,15 +451,13 @@ pub fn print_error_chain(error: failure::Error) {
 
     for cause in error.as_fail().iter_causes() {
         println!("caused by: {}", cause);
-        if show_bt {
-            if let Some(backtrace) = cause.backtrace() {
-                println!("stack trace: {}", backtrace);
-            }
+        if show_bt && let Some(backtrace) = cause.backtrace() {
+            println!("stack trace: {}", backtrace);
         }
     }
 
     if !show_bt {
-        println!("");
+        println!();
         println!("not: run with environment variable 'RUST_BACKTRACE=1' for detailed stack traces");
     }
 }
