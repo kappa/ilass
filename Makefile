@@ -1,29 +1,34 @@
 package_windows64:
-	curl https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.2-win64-shared.zip -o target/ffmpeg.zip
-	unzip target/ffmpeg.zip -d target
-	mv target/ffmpeg-4.2-win64-shared target/ffmpeg
-	echo
-	mkdir target/ilass-windows64
-	mkdir target/ilass-windows64/ffmpeg
-	mkdir target/ilass-windows64/bin
-	curl https://www.gnu.org/licenses/gpl-3.0.txt > target/ilass-windows64/bin/LICENSE.txt
-	cp target/ffmpeg/LICENSE.txt target/ilass-windows64/ffmpeg/LICENSE.txt
-	cp target/ffmpeg/README.txt target/ilass-windows64/ffmpeg/README.txt
-	cp -r target/ffmpeg/bin target/ilass-windows64/ffmpeg/bin
-	rm target/ilass-windows64/ffmpeg/bin/ffplay.exe
-	cargo build --release --target x86_64-pc-windows-gnu
-	cp target/x86_64-pc-windows-gnu/release/ilass-cli.exe target/ilass-windows64/bin
-	echo -ne '@echo off\r\nset ILASS_FFMPEG_PATH=%~dp0ffmpeg\\bin\\ffmpeg.exe\r\nset ILASS_FFPROBE_PATH=%~dp0ffmpeg\\bin\\ffprobe.exe\r\n"%~dp0bin\\ilass-cli.exe" %*\r\n' > target/ilass-windows64/ilass.bat
-	( cd target; zip -J -r ilass-windows64.zip ilass-windows64 )
+	# Build ilass
+	cargo build --release --bin ilass --target x86_64-pc-windows-gnu
 
+	# Create package structure
+	mkdir -p pkg
+	mkdir -p pkg/ffmpeg
+
+	# Copy FFmpeg files
+	curl -L https://github.com/GyanD/codexffmpeg/releases/download/5.0/ffmpeg-5.0-essentials_build.zip -o target/ffmpeg.zip
+	unzip target/ffmpeg.zip -d target
+	cp target/ffmpeg-5.0-essentials_build/LICENSE pkg/ffmpeg/LICENSE-ffmpeg
+	cp target/ffmpeg-5.0-essentials_build/README.txt pkg/ffmpeg/README.txt
+	cp target/ffmpeg-5.0-essentials_build/bin/ffmpeg.exe pkg/ffmpeg/ffmpeg.exe
+	cp target/ffmpeg-5.0-essentials_build/bin/ffprobe.exe pkg/ffmpeg/ffprobe.exe
+
+	# Copy ilass files
+	cp LICENSE pkg/LICENSE
+	cp target/x86_64-pc-windows-gnu/release/ilass.exe pkg/ilass.exe
+
+	# Create batch script
+	echo -ne '@echo off\r\nset ILASS_FFMPEG_PATH=%~dp0ffmpeg\\ffmpeg.exe\r\nset ILASS_FFPROBE_PATH=%~dp0ffmpeg\\ffprobe.exe\r\n"%~dp0ilass.exe" %*\r\n' > target/ilass-windows64/ilass.bat
+
+	# Create zip archive
+	zip -r -j ilass-win-x86_64.zip pkg
 
 clean_windows64:
-	rm target/ilass-windows64.zip -f
-	rm target/ffmpeg-4.2-win64-shared.zip -f
-	rm target/ffmpeg-4.2-win64-shared -rf
-	rm target/ffmpeg -rf
-	rm target/ilass-windows64 -rf
+	rm -rf target/ffmpeg-*
+	rm -rf pkg
+	rm -f ilass-win-x86_64.zip
 
 package_linux64:
-	cargo build --release --target x86_64-unknown-linux-musl
-	cp ./target/x86_64-unknown-linux-musl/release/ilass-cli ./target/ilass-linux64
+	cargo build --release --bin ilass --target x86_64-unknown-linux-musl
+	tar -czvf ilass-linux-x86_64.tar.gz --dir target/x86_64-unknown-linux-musl/release ilass

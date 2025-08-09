@@ -41,6 +41,10 @@
 
             # project specific
             ffmpeg
+
+            # Windows packaging
+            zip
+            unzip
           ];
 
           env = {
