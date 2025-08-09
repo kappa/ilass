@@ -1,6 +1,7 @@
-# ilass
+> [!NOTE]
+> This is a fork of [kaegi/alass](https://github.com/kaegi/alass).
 
-This Rust library contains the core algorithm for `ilass`, the "Automatic Language-Agnostic Subtitle Sychronization" tool. If you want to go to the command line tool instead, please click [here](https://github.com/SandroHc/ilass).
+`ilass` is a library to synchronize subtitles to movies. If you are looking for the command line tool, please click [here](https://github.com/SandroHc/ilass).
 
 ## How to use the library
 
@@ -10,11 +11,11 @@ Add `ilass` as a dependency to your project:
 cargo add ilass
 ```
 
-Or alternative edit your `Cargo.toml`:
+Alternatively, edit your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ilass = "2.0.0"
+ilass = "2.1.0"
 ```
 
 The library only contains one function that takes two sequences of time spans and returns the offsets to get the best possible alignment.

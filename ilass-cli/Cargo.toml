@@ -1,6 +1,6 @@
 [package]
 name = "ilass-cli"
-version = "2.0.0"
+version = "2.1.0"
 authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
 description = "Automatic Language-Agnostic Subtitle Synchronization (Command Line Tool)"
 repository = "https://github.com/SandroHc/ilass"
@@ -23,7 +23,7 @@ ffmpeg-binary = ["byteorder"]
 
 
 [dependencies]
-ilass = { version = "2.0.0", path = "../ilass" }
+ilass = { version = "2.1.0", path = "../ilass" }
 webrtc-vad = "0.4.0"
 subparse = "0.7.0"
 

@@ -1,6 +1,6 @@
 [package]
 name = "ilass"
-version = "2.0.0"
+version = "2.1.0"
 authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
 description = "Automatic Language-Agnostic Subtitle Synchronization (Library)"
 repository = "https://github.com/SandroHc/ilass/ilass-core"
