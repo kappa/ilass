@@ -12,7 +12,7 @@ extern crate subparse;
 use crate::subparse::SubtitleFileInterface;
 
 use ilass::{align, TimeDelta as AlgTimeDelta};
-use clap::{App, Arg};
+use clap::{command, Arg, ArgAction};
 use encoding_rs::Encoding;
 use failure::ResultExt;
 use std::ffi::OsStr;
@@ -31,12 +31,12 @@ fn unpack_clap_number_f64(
     matches: &clap::ArgMatches,
     parameter_name: &'static str,
 ) -> Result<f64, InputArgumentsError> {
-    let paramter_value_str: &str = matches.value_of(parameter_name).unwrap();
-    f64::from_str(paramter_value_str)
+    let parameter_value_str: &String = matches.get_one(parameter_name).unwrap();
+    f64::from_str(&parameter_value_str)
         .with_context(|_| {
             InputArgumentsErrorKind::ArgumentParseError {
                 argument_name: parameter_name.to_string(),
-                value: paramter_value_str.to_string(),
+                value: parameter_value_str.to_string(),
             }
             .into()
         })
@@ -48,12 +48,12 @@ fn unpack_clap_number_i64(
     matches: &clap::ArgMatches,
     parameter_name: &'static str,
 ) -> Result<i64, InputArgumentsError> {
-    let paramter_value_str: &str = matches.value_of(parameter_name).unwrap();
-    i64::from_str(paramter_value_str)
+    let parameter_value_str: &String = matches.get_one(parameter_name).unwrap();
+    i64::from_str(parameter_value_str)
         .with_context(|_| {
             InputArgumentsErrorKind::ArgumentParseError {
                 argument_name: parameter_name.to_string(),
-                value: paramter_value_str.to_string(),
+                value: parameter_value_str.to_string(),
             }
             .into()
         })
@@ -64,11 +64,10 @@ fn unpack_optional_clap_number_usize(
     matches: &clap::ArgMatches,
     parameter_name: &'static str,
 ) -> Result<Option<usize>, InputArgumentsError> {
-    
-    match matches.value_of(parameter_name) {
+    match matches.get_one::<String>(parameter_name) {
         None => Ok(None),
         Some(parameter_value_str) => {
-            usize::from_str(parameter_value_str)
+            usize::from_str(&parameter_value_str)
                 .with_context(|_| {
                     InputArgumentsErrorKind::ArgumentParseError {
                         argument_name: parameter_name.to_string(),
@@ -128,92 +127,88 @@ struct Arguments {
 }
 
 fn parse_args() -> Result<Arguments, InputArgumentsError> {
-    let matches = App::new(PKG_NAME.unwrap_or("unkown (not compiled with cargo)"))
-        .version(PKG_VERSION.unwrap_or("unknown (not compiled with cargo)"))
-        .about(PKG_DESCRIPTION.unwrap_or("unknown (not compiled with cargo)"))
-        .arg(Arg::with_name("reference-file")
+    let matches = command!()
+        .arg(Arg::new("reference-file")
             .help("Path to the reference subtitle or video file")
             .required(true))
-        .arg(Arg::with_name("incorrect-sub-file")
+        .arg(Arg::new("incorrect-sub-file")
             .help("Path to the incorrect subtitle file")
             .required(true))
-        .arg(Arg::with_name("output-file-path")
+        .arg(Arg::new("output-file-path")
             .help("Path to corrected subtitle file")
             .required(true))
-        .arg(Arg::with_name("split-penalty")
-            .short("p")
+        .arg(Arg::new("split-penalty")
+            .short('p')
             .long("split-penalty")
             .value_name("floating point number from 0 to 1000")
             .help("Determines how eager the algorithm is to avoid splitting of the subtitles. 1000 means that all lines will be shifted by the same offset, while 0.01 will produce MANY segments with different offsets. Values from 1 to 20 are the most useful.")
             .default_value("7"))
-        .arg(Arg::with_name("interval")
-            .short("i")
+        .arg(Arg::new("interval")
+            .short('i')
             .long("interval")
             .value_name("integer in milliseconds")
             .help("The smallest recognized time interval, smaller numbers make the alignment more accurate, greater numbers make aligning faster.")
             .default_value("1"))
-        .arg(Arg::with_name("allow-negative-timestamps")
-            .short("n")
+        .arg(Arg::new("allow-negative-timestamps")
+            .short('n')
             .long("allow-negative-timestamps")
-            .help("Negative timestamps can lead to problems with the output file, so by default 0 will be written instead. This option allows you to disable this behavior."))
-        .arg(Arg::with_name("sub-fps-ref")
+            .help("Negative timestamps can lead to problems with the output file, so by default 0 will be written instead. This option allows you to disable this behavior.")
+            .action(ArgAction::SetTrue))
+        .arg(Arg::new("sub-fps-ref")
             .long("sub-fps-ref")
             .value_name("floating-point number in frames-per-second")
             .default_value("30")
             .help("Specifies the frames-per-second for the accompanying video of MicroDVD `.sub` files (MicroDVD `.sub` files store timing information as frame numbers). Only affects the reference subtitle file."))
-        .arg(Arg::with_name("sub-fps-inc")
+        .arg(Arg::new("sub-fps-inc")
             .long("sub-fps-inc")
             .value_name("floating-point number in frames-per-second")
             .default_value("30")
             .help("Specifies the frames-per-second for the accompanying video of MicroDVD `.sub` files (MicroDVD `.sub` files store timing information as frame numbers). Only affects the incorrect subtitle file."))
-        .arg(Arg::with_name("encoding-ref")
+        .arg(Arg::new("encoding-ref")
             .long("encoding-ref")
             .value_name("encoding")
             .help("Charset encoding of the reference subtitle file.")
             .default_value("auto"))
-        .arg(Arg::with_name("encoding-inc")
+        .arg(Arg::new("encoding-inc")
             .long("encoding-inc")
             .value_name("encoding")
             .help("Charset encoding of the incorrect subtitle file.")
             .default_value("auto"))
-        .arg(Arg::with_name("speed-optimization")
+        .arg(Arg::new("speed-optimization")
             .long("speed-optimization")
-            .short("O")
+            .short('O')
             .value_name("path")
             .default_value("1")
-            .help("(greatly) speeds up synchronization by sacrificing some accuracy; set to 0 to disable speed optimization")
-            .required(false)
-            )
-        .arg(Arg::with_name("statistics-required-tag")
+            .help("Greatly speeds up synchronization by sacrificing some accuracy; set to 0 to disable speed optimization")
+            .required(false))
+        .arg(Arg::new("statistics-required-tag")
             .long("statistics-required-tag")
-            .short("t")
+            .short('t')
             .value_name("tag")
-            .help("only output statistics containing this tag (you can find the tags in statistics file)")
-            .required(false)
-            )
-        .arg(Arg::with_name("no-split")
-            .help("synchronize subtitles without looking for splits/breaks - this mode is much faster")
-            .short("l")
+            .help("Only output statistics containing this tag (you can find the tags in statistics file)")
+            .required(false))
+        .arg(Arg::new("no-split")
+            .help("Synchronize subtitles without looking for splits/breaks - this mode is much faster")
+            .short('l')
             .long("no-split")
-        )
-        .arg(Arg::with_name("disable-fps-guessing")
-            .help("disables guessing and correcting of framerate differences between reference file and input file")
-            .short("g")
+            .action(ArgAction::SetTrue))
+        .arg(Arg::new("disable-fps-guessing")
+            .help("Disables guessing and correcting of framerate differences between reference file and input file")
+            .short('g')
             .long("disable-fps-guessing")
             .alias("disable-framerate-guessing")
-        )
-        .arg(Arg::with_name("audio-index")
-            .help("specifies the audio index in the reference video file")
+            .action(ArgAction::SetTrue))
+        .arg(Arg::new("audio-index")
+            .help("Specifies the audio index in the reference video file")
             .long("index")
             .value_name("audio-index")
-            .required(false)
-        )
+            .required(false))
         .after_help("This program works with .srt, .ass/.ssa, .idx and .sub files. The corrected file will have the same format as the incorrect file.")
         .get_matches();
 
-    let reference_file_path: PathBuf = matches.value_of("reference-file").unwrap().into();
-    let incorrect_file_path: PathBuf = matches.value_of("incorrect-sub-file").unwrap().into();
-    let output_file_path: PathBuf = matches.value_of("output-file-path").unwrap().into();
+    let reference_file_path: PathBuf = matches.get_one::<String>("reference-file").unwrap().into();
+    let incorrect_file_path: PathBuf = matches.get_one::<String>("incorrect-sub-file").unwrap().into();
+    let output_file_path: PathBuf = matches.get_one::<String>("output-file-path").unwrap().into();
 
     let interval: i64 = unpack_clap_number_i64(&matches, "interval")?;
     if interval < 1 {
@@ -244,7 +239,7 @@ fn parse_args() -> Result<Arguments, InputArgumentsError> {
         .into());
     }
 
-    let no_split_mode: bool = matches.is_present("no-split");
+    let no_split_mode: bool = matches.get_flag("no-split");
 
     Ok(Arguments {
         reference_file_path,
@@ -254,11 +249,11 @@ fn parse_args() -> Result<Arguments, InputArgumentsError> {
         split_penalty,
         sub_fps_ref: unpack_clap_number_f64(&matches, "sub-fps-ref")?,
         sub_fps_inc: unpack_clap_number_f64(&matches, "sub-fps-inc")?,
-        allow_negative_timestamps: matches.is_present("allow-negative-timestamps"),
-        encoding_ref: get_encoding(matches.value_of("encoding-ref")),
-        encoding_inc: get_encoding(matches.value_of("encoding-inc")),
+        allow_negative_timestamps: matches.get_flag("allow-negative-timestamps"),
+        encoding_ref: get_encoding(matches.get_one::<String>("encoding-ref").map(|s| s.as_str())),
+        encoding_inc: get_encoding(matches.get_one::<String>("encoding-inc").map(|s| s.as_str())),
         no_split_mode,
-        guess_fps_ratio: !matches.is_present("disable-fps-guessing"),
+        guess_fps_ratio: !matches.get_flag("disable-fps-guessing"),
         speed_optimization: if speed_optimization <= 0. {
             None
         } else {

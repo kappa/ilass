@@ -242,7 +242,7 @@ mod tests {
 
     /// Generate random time span sequences
     fn generate_random_time_spans() -> Vec<TimeSpan> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let len: usize = (rng.next_u32() % 400) as usize;
         let mut v = Vec::with_capacity(len);

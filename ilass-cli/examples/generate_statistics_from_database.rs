@@ -1,8 +1,7 @@
 // This file is not really meant as an example. This program in conjunction with the `../statistics-helpers/*` create the diagrams .
 
 use ilass_cli::*;
-use clap::{crate_authors, value_t};
-use clap::{App, Arg};
+use clap::{command, crate_authors, Arg};
 use failure::{Backtrace, Context, Fail, ResultExt};
 use rmp_serde as rmps;
 use std::cmp::Ordering;
@@ -11,7 +10,7 @@ use std::collections::HashSet;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic;
@@ -1462,277 +1461,236 @@ fn run() -> Result<(), TopLevelError> {
         .expect("Error setting Ctrl-C handler");
     }
 
-    let matches = App::new("ilass statistics")
-        .version(PKG_VERSION.unwrap_or("unknown version (not compiled with cargo)"))
-        .author(crate_authors!())
+    let matches = command!("ilass statistics")
         .about("Generate statistics of ilass for a database JSON file")
         .arg(
-            Arg::with_name("database-dir")
+            Arg::new("database-dir")
                 .long("database-dir")
                 .value_name("INPUT_DATABASE_DIRECTORY")
                 .help("Path to the database directory")
-                .multiple(false)
-                .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("statistics-dir")
+            Arg::new("statistics-dir")
                 .long("statistics-dir")
                 .value_name("OUTPUT_STATISTICS_DIRECTORY")
                 .help("Path to statistics output directory")
-                .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("cache-dir")
+            Arg::new("cache-dir")
                 .long("cache-dir")
-                .value_name("CACHE_DIRECOTRY")
-                .multiple(false)
+                .value_name("CACHE_DIRECTORY")
                 .help("Path to the cache directory")
-                .takes_value(true),
         )
         .arg(
-            Arg::with_name("only-every-nth-sub")
+            Arg::new("only-every-nth-sub")
                 .long("only-every-nth-sub")
                 .value_name("NUMBER")
-                .multiple(false)
                 .help("Only synchronize every n-th subtitle; speeds up time to plots")
-                .takes_value(true),
         )
         .arg(
-            Arg::with_name("only-sub")
+            Arg::new("only-sub")
                 .long("only-sub")
                 .alias("only-sub-id")
                 .alias("only-subtitle")
                 .alias("only-subtitle-id")
                 .value_name("SUBTITLE_ID")
-                .multiple(true)
                 .help("Only synchronize the given subtitle")
-                .takes_value(true)
         )
         .arg(
-            Arg::with_name("only-movie")
+            Arg::new("only-movie")
                 .long("only-movie")
                 .alias("only-movie-id")
                 .value_name("MOVIE_ID")
-                .multiple(true)
                 .help("Only synchronize the given movie")
-                .takes_value(true)
         )
         .arg(
-            Arg::with_name("ignore-movie")
+            Arg::new("ignore-movie")
                 .long("ignore-movie")
                 .alias("ignore-movie-id")
                 .value_name("MOVIE_ID")
-                .multiple(true)
                 .help("Exclude movies by id")
-                .takes_value(true),
         )
         .arg(
-            Arg::with_name("ignore-sub")
+            Arg::new("ignore-sub")
                 .long("ignore-sub")
                 .alias("ignore-sub-id")
                 .value_name("SUB_ID")
-                .multiple(true)
                 .help("Exclude subtitles by id")
-                .takes_value(true),
         )
         .arg(
-            Arg::with_name("quiet")
+            Arg::new("quiet")
                 .long("quiet")
-                .short("q")
-                .multiple(false)
+                .short('q')
                 .help("Suppress unnecessary output")
         )
         .arg(
-            Arg::with_name("clean-cache")
+            Arg::new("clean-cache")
                 .long("clean-cache")
-                .short("c")
-                .multiple(false)
+                .short('c')
                 .help("Clean/Overwrite the cache file")
                 .requires("cache-dir"),
         )
         .arg(
-            Arg::with_name("clean-cache-line-pairs")
+            Arg::new("clean-cache-line-pairs")
                 .long("clean-cache-line-pairs")
-                .multiple(false)
                 .help("Clean/Overwrite the line pairing/matching in the cache file")
                 .requires("cache-dir"),
         )
         .arg(
-            Arg::with_name("clean-cache-vad")
+            Arg::new("clean-cache-vad")
                 .long("clean-cache-vad")
-                .multiple(false)
                 .help("Clean/Overwrite the Voice-Activity-Detection spans in the cache file")
                 .requires("cache-dir"),
         )
         .arg(
-            Arg::with_name("clean-cache-deltas")
+            Arg::new("clean-cache-deltas")
                 .long("clean-cache-deltas")
-                .multiple(false)
                 .help("Clean/Overwrite all alignment delta data in the cache file")
                 .requires("cache-dir"),
         )
         .arg(
-            Arg::with_name("include-synced-subs-in-distance-histogram")
+            Arg::new("include-synced-subs-in-distance-histogram")
                 .long("include-synced-subs-in-distance-histogram")
-                .multiple(false)
                 .help("Include subtitles that have a classification of being synced without ilass in 'distance to reference histogram'")
         )
         .arg(
-            Arg::with_name("default-split-penalty")
+            Arg::new("default-split-penalty")
                 .long("default-split-penalty")
                 .default_value("0.5")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("only-general-statistics")
+            Arg::new("only-general-statistics")
                 .long("only-general-statistics")
                 .help("Option to only generate statistics for default configuration for each subtitle")
         )
         .arg(
-            Arg::with_name("transient-statistics")
+            Arg::new("transient-statistics")
                 .long("transient-statistics")
                 .help("Also collect statistics on RAM, runtime performance, ... of the algorithms")
         )
         .arg(
-            Arg::with_name("only-transient-statistics")
+            Arg::new("only-transient-statistics")
                 .long("only-transient-statistics")
                 .help("Only collect statistics on RAM, runtime performance, ... of the algorithms")
         )
         .arg(
-            Arg::with_name("split-penalties")
+            Arg::new("split-penalties")
                 .long("split-penalties")
                 .default_value("0.25,0.5,1,2,3,4,5,6,7,8,9,10,20,30")
                 .help("comma separated float values")
-                .takes_value(true)
-                .multiple(true)
         )
         .arg(
-            Arg::with_name("optimization-values")
+            Arg::new("optimization-values")
                 .long("optimization-values")
                 .default_value("0.5,1,2,3,4,5")
                 .help("comma separated float values")
-                .takes_value(true)
-                .multiple(true)
         )
         .arg(
-            Arg::with_name("default-optimization")
+            Arg::new("default-optimization")
                 .long("default-optimization")
                 .default_value("1.5")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("default-min-span-length")
+            Arg::new("default-min-span-length")
                 .long("default-min-span-length")
                 .default_value("300")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("min-span-lengths")
+            Arg::new("min-span-lengths")
                 .long("min-span-lengths")
                 .default_value("100,200,300,400,500,600,800,1000")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("default-max-good-sync-offset")
+            Arg::new("default-max-good-sync-offset")
                 .long("default-max-good-sync-offset")
                 .default_value("200")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("default-required-good-sync-spans-percentage")
+            Arg::new("default-required-good-sync-spans-percentage")
                 .long("default-required-good-sync-spans-percentage")
                 .default_value("95")
-                .takes_value(true)
-                .multiple(false)
         )
         .arg(
-            Arg::with_name("num-threads")
+            Arg::new("num-threads")
                 .long("num-threads")
                 .default_value("4")
-                .takes_value(true)
-                .multiple(false)
         )
         .get_matches();
 
-    let database_path = matches.value_of_os("database-dir").expect("missing database path");
+    let database_path = matches.get_one::<PathBuf>("database-dir").expect("missing database path");
     let output_dir: PathBuf = matches
-        .value_of_os("statistics-dir")
+        .get_one::<PathBuf>("statistics-dir")
         .expect("missing output statistics directory path")
         .into();
-    let cache_dir: Option<PathBuf> = matches.value_of_os("cache-dir").map(|v| v.into());
-    let clean_cache: bool = matches.is_present("clean-cache");
-    let clean_cache_vad: bool = matches.is_present("clean-cache-vad");
+    let cache_dir: Option<PathBuf> = matches.get_one::<PathBuf>("cache-dir").map(|v| v.into());
+    let clean_cache = matches.get_flag("clean-cache");
+    let clean_cache_vad = matches.get_flag("clean-cache-vad");
 
-    let clean_cache_deltas: bool = matches.is_present("clean-cache-deltas");
-    let quiet: bool = matches.is_present("quiet");
-    let clean_cache_line_pairs: bool = matches.is_present("clean-cache-line-pairs");
+    let clean_cache_deltas = matches.get_flag("clean-cache-deltas");
+    let quiet = matches.get_flag("quiet");
+    let clean_cache_line_pairs = matches.get_flag("clean-cache-line-pairs");
 
     let only_subtitles_opt: Option<HashSet<SubtitleID>> =
-        matches.values_of("only-sub").map(|vs| vs.map(String::from).collect());
+        matches.get_many::<String>("only-sub").map(|vs| vs.cloned().collect());
     let only_movies_opt: Option<HashSet<SubtitleID>> =
-        matches.values_of("only-movie").map(|vs| vs.map(String::from).collect());
-    let only_general_statistics: bool = matches.is_present("only-general-statistics");
+        matches.get_many::<String>("only-movie").map(|vs| vs.cloned().collect());
+    let only_general_statistics = matches.get_flag("only-general-statistics");
 
-    let distance_histogram_includes_synced_subtitles = matches.is_present("include-synced-subs-in-distance-histogram");
+    let distance_histogram_includes_synced_subtitles = matches.get_flag("include-synced-subs-in-distance-histogram");
 
     // statistics on performance, RAM, ...
-    let only_gather_transient_statistics = matches.is_present("only-transient-statistics");
-    let gather_transient_statistics = matches.is_present("transient-statistics") || only_gather_transient_statistics;
+    let only_gather_transient_statistics = matches.get_flag("only-transient-statistics");
+    let gather_transient_statistics = matches.get_flag("transient-statistics") || only_gather_transient_statistics;
 
-    let default_split_penalty: f64 = value_t!(matches, "default-split-penalty", f64).unwrap();
-    let default_optimization: f64 = value_t!(matches, "default-optimization", f64).unwrap();
-    let default_min_span_length_ms: i64 = value_t!(matches, "default-min-span-length", i64).unwrap();
+    let default_split_penalty: f64 = *matches.get_one("default-split-penalty").unwrap();
+    let default_optimization: f64 = *matches.get_one("default-optimization").unwrap();
+    let default_min_span_length_ms: i64 = *matches.get_one("default-min-span-length").unwrap();
     let max_good_sync_offsets: Vec<i64> = matches
-        .value_of("default-max-good-sync-offset")
+        .get_one::<String>("default-max-good-sync-offset")
         .unwrap()
         .split(',')
         .map(|v| v.parse::<i64>().unwrap())
         .collect();
     let required_good_sync_spans_percentages: Vec<f64> = matches
-        .value_of("default-required-good-sync-spans-percentage")
+        .get_one::<String>("default-required-good-sync-spans-percentage")
         .unwrap()
         .split(',')
         .map(|v| v.parse::<f64>().unwrap())
         .collect();
     let split_penalties: Vec<f64> = matches
-        .value_of("split-penalties")
+        .get_one::<String>("split-penalties")
         .unwrap()
         .split(',')
         .map(|v| v.trim().parse::<f64>().unwrap())
         .collect();
     let optimization_values: Vec<f64> = matches
-        .value_of("optimization-values")
+        .get_one::<String>("optimization-values")
         .unwrap()
         .split(',')
         .map(|v| v.trim().parse::<f64>().unwrap())
         .collect();
     let min_span_lengths: Vec<i64> = matches
-        .value_of("min-span-lengths")
+        .get_one::<String>("min-span-lengths")
         .unwrap()
         .split(',')
         .map(|v| v.trim().parse::<i64>().unwrap())
         .collect();
 
-    let num_threads: usize = value_t!(matches, "num-threads", usize).unwrap();
+    let num_threads: usize = *matches.get_one("num-threads").unwrap();
 
     let ignored_movies: HashSet<String> = matches
-        .values_of("ignore-movie")
-        .map(|v| v.map(|x| x.to_string()).collect::<HashSet<String>>())
+        .get_many::<String>("ignore-movie")
+        .map(|v| v.cloned().collect::<HashSet<String>>())
         .unwrap_or_else(|| HashSet::new());
 
     let ignored_subs: HashSet<String> = matches
-        .values_of("ignore-sub")
-        .map(|v| v.map(|x: &str| x.to_string()).collect::<HashSet<String>>())
+        .get_many::<String>("ignore-sub")
+        .map(|v| v.cloned().collect::<HashSet<String>>())
         .unwrap_or_else(|| HashSet::new());
 
-    let only_every_nth_sub: Option<usize> = value_t!(matches, "only-every-nth-sub", usize).ok();
+    let only_every_nth_sub: Option<usize> = matches.get_one("only-every-nth-sub").cloned();
 
     let json_file_path = Path::new(database_path).join("database.json");
     let json_file = File::open(json_file_path).expect("database file not found");

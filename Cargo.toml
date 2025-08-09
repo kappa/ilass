@@ -1,5 +1,6 @@
 [workspace]
 members = ["ilass", "ilass-cli"]
+resolver = "3"
 
 [workspace.package]
 authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]

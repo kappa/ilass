@@ -22,4 +22,4 @@ nosplit-heap-sort = []
 [dependencies]
 
 [dev-dependencies]
-rand = "0.7"
+rand = "0.9"

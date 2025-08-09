@@ -17,10 +17,6 @@ pub mod video_decoder;
 use subparse::timetypes::*;
 use subparse::{get_subtitle_format_err, parse_bytes, SubtitleFile};
 
-pub const PKG_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
-pub const PKG_NAME: Option<&'static str> = option_env!("CARGO_PKG_NAME");
-pub const PKG_DESCRIPTION: Option<&'static str> = option_env!("CARGO_PKG_DESCRIPTION");
-
 /*#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum VideoFileFormat {
     /// we don't need to differentiate between video file formats in current code
