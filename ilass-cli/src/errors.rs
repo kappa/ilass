@@ -1,4 +1,4 @@
-// This file is part of the Rust library and binary `alass`.
+// This file is part of the Rust library and binary `ilass`.
 //
 // Copyright (C) 2017 kaegi
 //

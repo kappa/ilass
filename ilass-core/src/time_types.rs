@@ -1,4 +1,4 @@
-// This file is part of the Rust library and binary `alass`.
+// This file is part of the Rust library and binary `ilass`.
 //
 // Copyright (C) 2017 kaegi
 //
@@ -161,7 +161,7 @@ impl Neg for TimeDelta {
 /// The only way to create a new `TimePoint` is with `TimePoint::from({i64})`.
 ///
 /// ```
-/// use alass_core::TimePoint;
+/// use ilass_core::TimePoint;
 ///
 /// let p = TimePoint::from(10);
 ///
@@ -251,7 +251,7 @@ impl TimeSpan {
     ///
     /// # Examples
     /// ```rust
-    /// use alass_core::{TimeSpan, TimePoint};
+    /// use ilass_core::{TimeSpan, TimePoint};
     ///
     /// let t0 = TimePoint::from(0);
     /// let t10 = TimePoint::from(10);
@@ -265,7 +265,7 @@ impl TimeSpan {
     /// This function asserts that `start` is less or equal `end`.
     ///
     /// ```rust,should_panic
-    /// use alass_core::{TimeSpan, TimePoint};
+    /// use ilass_core::{TimeSpan, TimePoint};
     ///
     /// let t0 = TimePoint::from(0);
     /// let t10 = TimePoint::from(10);
@@ -285,7 +285,7 @@ impl TimeSpan {
     ///
     /// # Examples
     /// ```rust
-    /// use alass_core::{TimeSpan, TimePoint};
+    /// use ilass_core::{TimeSpan, TimePoint};
     ///
     /// let t0 = TimePoint::from(0);
     /// let t10 = TimePoint::from(10);
@@ -343,7 +343,7 @@ impl TimeSpan {
     ///
     /// # Examples
     /// ```
-    /// use alass_core::{TimeSpan, TimePoint};
+    /// use ilass_core::{TimeSpan, TimePoint};
     /// ```
     pub fn contains(self, other: TimeSpan) -> bool {
         other.start >= self.start && other.end <= self.end
@@ -352,7 +352,7 @@ impl TimeSpan {
     /// Returns the smallest difference between two `TimeSpan`s.
     ///
     /// ```
-    /// use alass_core::{TimeSpan, TimePoint, TimeDelta};
+    /// use ilass_core::{TimeSpan, TimePoint, TimeDelta};
     ///
     /// let p = TimePoint::from(0);
     /// let d = TimeDelta::one();

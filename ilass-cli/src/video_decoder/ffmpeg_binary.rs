@@ -191,7 +191,7 @@ impl VideoDecoderFFmpegBinary {
             OsString::from(file_path.as_ref()),
         ];
 
-        let ffprobe_path: PathBuf = std::env::var_os("ALASS_FFPROBE_PATH")
+        let ffprobe_path: PathBuf = std::env::var_os("ILASS_FFPROBE_PATH")
             .unwrap_or(OsString::from("ffprobe"))
             .into();
 
@@ -226,7 +226,7 @@ impl VideoDecoderFFmpegBinary {
             }
         }
 
-        let ffmpeg_path: PathBuf = std::env::var_os("ALASS_FFMPEG_PATH")
+        let ffmpeg_path: PathBuf = std::env::var_os("ILASS_FFMPEG_PATH")
             .unwrap_or(OsString::from("ffmpeg"))
             .into();
 

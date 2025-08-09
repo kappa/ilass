@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "alass-core",
-    "alass-cli"
+    "ilass-core",
+    "ilass-cli"
 ]
 
 [profile.release]

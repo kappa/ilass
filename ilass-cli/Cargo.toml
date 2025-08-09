@@ -1,10 +1,10 @@
 [package]
-name = "alass-cli"
+name = "ilass-cli"
 version = "2.0.0"
-authors = ["kaegi <kaegi.dev@gmail.com>"]
+authors = ["kaegi <kaegi.dev@gmail.com>", "Sandro Marques <me@sandro.dev>"]
 description = "Automatic Language-Agnostic Subtitle Synchronization (Command Line Tool)"
-repository = "https://github.com/kaegi/alass"
-documentation = "https://docs.rs/alass-cli"
+repository = "https://github.com/SandroHc/ilass"
+documentation = "https://docs.rs/ilass-cli"
 readme = "../README.md"
 keywords = ["align", "subtitle", "automatic", "api", "tool"]
 license = "GPL-3.0"
@@ -19,7 +19,7 @@ ffmpeg-binary = ["byteorder"]
 
 
 [dependencies]
-alass-core = { version = "2.0.0", path = "../alass-core" }
+ilass-core = { version = "2.0.0", path = "../ilass-core" }
 webrtc-vad = "0.4.0"
 subparse = "0.7.0"
 

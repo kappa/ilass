@@ -1,4 +1,4 @@
-// This file is part of the Rust library and binary `alass`.
+// This file is part of the Rust library and binary `ilass`.
 //
 // Copyright (C) 2017 kaegi
 //
@@ -621,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    /// Aligns random timespans to each other and calls alass. General test whether any internal
+    /// Aligns random timespans to each other and calls ilass. General test whether any internal
     /// assertions are invalidated.
     fn run_aligner() {
         for _ in 0..40 {
@@ -664,16 +664,16 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         for _ in 0..30 {
-            let alass = get_dummy_aligner();
+            let ilass = get_dummy_aligner();
             let len: i64 = (rng.next_u32() % 100) as i64;
-            let rating_buffer1 = alass.get_compressed_overlapping_ratings(
-                alass.get_start(),
-                alass.get_end(),
+            let rating_buffer1 = ilass.get_compressed_overlapping_ratings(
+                ilass.get_start(),
+                ilass.get_end(),
                 TimeDelta::one() * len,
             );
-            let rating_buffer2 = alass.get_compressed_overlapping_ratings_slow(
-                alass.get_start(),
-                alass.get_end(),
+            let rating_buffer2 = ilass.get_compressed_overlapping_ratings_slow(
+                ilass.get_start(),
+                ilass.get_end(),
                 TimeDelta::one() * len,
             );
             assert_eq!(

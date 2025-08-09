@@ -1,4 +1,4 @@
-// This file is part of the Rust library and binary `alass`.
+// This file is part of the Rust library and binary `ilass`.
 //
 // Copyright (C) 2017 kaegi
 //
@@ -24,11 +24,11 @@ extern crate encoding_rs;
 extern crate pbr;
 extern crate subparse;
 
-// Alg* stands for algorithm (the internal alass algorithm types)
+// Alg* stands for algorithm (the internal ilass algorithm types)
 
 use crate::subparse::SubtitleFileInterface;
 
-use alass_core::{align, TimeDelta as AlgTimeDelta};
+use ilass_core::{align, TimeDelta as AlgTimeDelta};
 use clap::{App, Arg};
 use encoding_rs::Encoding;
 use failure::ResultExt;
@@ -40,8 +40,8 @@ use std::str::FromStr;
 use subparse::timetypes::*;
 use subparse::{SubtitleEntry, SubtitleFormat};
 
-use alass_cli::errors::*;
-use alass_cli::*;
+use ilass_cli::errors::*;
+use ilass_cli::*;
 
 /// Does reading, parsing and nice error handling for a f64 clap parameter.
 fn unpack_clap_number_f64(
@@ -358,9 +358,9 @@ fn run() -> Result<(), failure::Error> {
         .into());
     }
 
-    let mut inc_aligner_timespans: Vec<alass_core::TimeSpan> =
+    let mut inc_aligner_timespans: Vec<ilass_core::TimeSpan> =
         timings_to_alg_timespans(inc_file.timespans(), args.interval);
-    let ref_aligner_timespans: Vec<alass_core::TimeSpan> =
+    let ref_aligner_timespans: Vec<ilass_core::TimeSpan> =
         timings_to_alg_timespans(ref_file.timespans(), args.interval);
 
     let mut fps_scaling_factor = 1.;
@@ -401,10 +401,10 @@ fn run() -> Result<(), failure::Error> {
     if args.no_split_mode {
         let num_inc_timespancs = inc_aligner_timespans.len();
 
-        let alg_delta = alass_core::align_nosplit(
+        let alg_delta = ilass_core::align_nosplit(
             &ref_aligner_timespans,
             &inc_aligner_timespans,
-            alass_core::standard_scoring,
+            ilass_core::standard_scoring,
             ProgressInfo::new(1, Some(align_start_msg)),
         )
         .0;
@@ -416,7 +416,7 @@ fn run() -> Result<(), failure::Error> {
             &inc_aligner_timespans,
             args.split_penalty,
             args.speed_optimization,
-            alass_core::standard_scoring,
+            ilass_core::standard_scoring,
             ProgressInfo::new(1, Some(align_start_msg)),
         )
         .0;

@@ -1,7 +1,7 @@
 // This file is not really meant as an example. This program in conjunction with the `../statistics-helpers/*` create the diagrams .
 
-use alass_cli::*;
-use clap::value_t;
+use ilass_cli::*;
+use clap::{crate_authors, value_t};
 use clap::{App, Arg};
 use failure::{Backtrace, Context, Fail, ResultExt};
 use rmp_serde as rmps;
@@ -346,10 +346,10 @@ mod types {
             self.end_ms - self.start_ms
         }
 
-        pub fn to_alass_core_spans(self, ms_per_alg_step: i64) -> alass_core::TimeSpan {
-            alass_core::TimeSpan::new(
-                alass_core::TimePoint::from(self.start_ms / ms_per_alg_step),
-                alass_core::TimePoint::from(self.end_ms / ms_per_alg_step),
+        pub fn to_ilass_core_spans(self, ms_per_alg_step: i64) -> ilass_core::TimeSpan {
+            ilass_core::TimeSpan::new(
+                ilass_core::TimePoint::from(self.start_ms / ms_per_alg_step),
+                ilass_core::TimePoint::from(self.end_ms / ms_per_alg_step),
             )
         }
 
@@ -872,6 +872,7 @@ fn perform_vad(movie: &database::Movie, cache: TCache) -> Result<Vec<Span>, TopL
         None => {
             let video_file_handler: VideoFileHandler = VideoFileHandler::open_video_file(
                 movie.path.as_path(),
+                None,
                 NoProgressInfo {},
                 /*ProgressInfo::new(
                     500,
@@ -946,12 +947,12 @@ fn align(
     scaling_factor: FixedPointNumber,
     config: &AlignConfig,
 ) -> Vec<i64> {
-    let ref_alg_spans: Vec<alass_core::TimeSpan> = ref_spans
-        .map(|span| span.to_alass_core_spans(config.ms_per_alg_step))
+    let ref_alg_spans: Vec<ilass_core::TimeSpan> = ref_spans
+        .map(|span| span.to_ilass_core_spans(config.ms_per_alg_step))
         .collect();
 
-    let in_alg_spans: Vec<alass_core::TimeSpan> = in_spans
-        .map(|span| span.to_alass_core_spans(config.ms_per_alg_step))
+    let in_alg_spans: Vec<ilass_core::TimeSpan> = in_spans
+        .map(|span| span.to_ilass_core_spans(config.ms_per_alg_step))
         .map(|span| span.scaled(scaling_factor.to_f64()))
         .collect();
 
@@ -960,11 +961,11 @@ fn align(
         AlignMode::NoSplit => {
             let num_inc_timespancs = in_alg_spans.len();
 
-            let (alg_delta, _score) = alass_core::align_nosplit(
+            let (alg_delta, _score) = ilass_core::align_nosplit(
                 &ref_alg_spans,
                 &in_alg_spans,
                 get_scoring_fn(config.scoring_mode),
-                alass_core::NoProgressHandler,
+                ilass_core::NoProgressHandler,
             );
             //println!("align score {}", score);
 
@@ -974,13 +975,13 @@ fn align(
             split_penalty,
             optimization,
         } => {
-            alg_deltas = alass_core::align(
+            alg_deltas = ilass_core::align(
                 &ref_alg_spans,
                 &in_alg_spans,
                 split_penalty.to_f64(),
                 optimization.map(FixedPointNumber::to_f64),
                 get_scoring_fn(config.scoring_mode),
-                alass_core::NoProgressHandler,
+                ilass_core::NoProgressHandler,
             )
             .0;
         }
@@ -1032,10 +1033,10 @@ fn assert_nosplit_deltas(deltas: &[i64]) -> i64 {
     delta
 }
 
-fn get_scoring_fn(scoring_mode: ScoringMode) -> impl Fn(alass_core::TimeDelta, alass_core::TimeDelta) -> f64 + Copy {
+fn get_scoring_fn(scoring_mode: ScoringMode) -> impl Fn(ilass_core::TimeDelta, ilass_core::TimeDelta) -> f64 + Copy {
     match scoring_mode {
-        ScoringMode::Standard => alass_core::standard_scoring,
-        ScoringMode::Overlap => alass_core::overlap_scoring,
+        ScoringMode::Standard => ilass_core::standard_scoring,
+        ScoringMode::Overlap => ilass_core::overlap_scoring,
     }
 }
 
@@ -1047,17 +1048,17 @@ fn compute_score(
     scaling_factor: FixedPointNumber,
     scoring_mode: ScoringMode,
 ) -> f64 {
-    alass_core::get_nosplit_score(
+    ilass_core::get_nosplit_score(
         ref_spans
             .iter()
             .cloned()
-            .map(|span| span.to_alass_core_spans(ms_per_alg_step)),
+            .map(|span| span.to_ilass_core_spans(ms_per_alg_step)),
         in_spans
             .iter()
             .cloned()
-            .map(|span| span.to_alass_core_spans(ms_per_alg_step))
+            .map(|span| span.to_ilass_core_spans(ms_per_alg_step))
             .map(|span| span.scaled(scaling_factor.to_f64()))
-            .map(|span| span + alass_core::TimeDelta::from_i64(offset / ms_per_alg_step)),
+            .map(|span| span + ilass_core::TimeDelta::from_i64(offset / ms_per_alg_step)),
         get_scoring_fn(scoring_mode),
     )
 }
@@ -1461,10 +1462,10 @@ fn run() -> Result<(), TopLevelError> {
         .expect("Error setting Ctrl-C handler");
     }
 
-    let matches = App::new("alass statistics")
+    let matches = App::new("ilass statistics")
         .version(PKG_VERSION.unwrap_or("unknown version (not compiled with cargo)"))
-        .author("kaegi")
-        .about("Generate statistics of alass for a database JSON file")
+        .author(crate_authors!())
+        .about("Generate statistics of ilass for a database JSON file")
         .arg(
             Arg::with_name("database-dir")
                 .long("database-dir")
@@ -1576,7 +1577,7 @@ fn run() -> Result<(), TopLevelError> {
             Arg::with_name("include-synced-subs-in-distance-histogram")
                 .long("include-synced-subs-in-distance-histogram")
                 .multiple(false)
-                .help("Include subtitles that have a classification of being synced without alass in 'distance to reference histogram'")
+                .help("Include subtitles that have a classification of being synced without ilass in 'distance to reference histogram'")
         )
         .arg(
             Arg::with_name("default-split-penalty")

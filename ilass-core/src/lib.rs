@@ -1,4 +1,4 @@
-// This file is part of the Rust library and binary `alass`.
+// This file is part of the Rust library and binary `ilass`.
 //
 // Copyright (C) 2017 kaegi
 //
@@ -27,7 +27,7 @@
 )]
 #![allow(unknown_lints)] // for clippy
 
-//! `alass` takes two timespan arrays (e.g. from two subtitle files) and
+//! `ilass` takes two timespan arrays (e.g. from two subtitle files) and
 //! tries to align the `incorrect` subtitles
 //! to the `reference` subtitle. It automatically fixes offsets and
 //! introduces/removes breaks between subtitles in the `incorrect`
@@ -36,16 +36,16 @@
 #[cfg(test)]
 extern crate rand;
 
-mod alass;
+mod ilass;
 mod rating_type;
 #[allow(dead_code)]
 mod segments;
 mod time_types;
 mod timespan_ops;
 
-use crate::alass::Aligner;
-pub use crate::alass::NoProgressHandler;
-pub use crate::alass::ProgressHandler;
+use crate::ilass::Aligner;
+pub use crate::ilass::NoProgressHandler;
+pub use crate::ilass::ProgressHandler;
 use crate::rating_type::{Rating, RatingDelta, RatingExt};
 pub use crate::time_types::{TimeDelta, TimePoint, TimeSpan};
 use crate::timespan_ops::prepare_time_spans;
