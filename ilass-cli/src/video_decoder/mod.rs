@@ -14,7 +14,7 @@ pub trait AudioReceiver {
     type Output;
     type Error: failure::Fail;
 
-    /// Samples are in 8000kHz mono/single-channel format.
+    /// Samples are in 16000kHz mono/single-channel format.
     fn push_samples(&mut self, samples: &[i16]) -> Result<(), Self::Error>;
 
     fn finish(self) -> Result<Self::Output, Self::Error>;

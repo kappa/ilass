@@ -23,7 +23,7 @@ ffmpeg-library = ["ffmpeg-sys"]
 
 [dependencies]
 ilass.workspace = true
-webrtc-vad = "0.4"
+voice_activity_detector = "0.2"
 subparse = "0.7"
 
 byteorder = { version = "1.5", optional = true }

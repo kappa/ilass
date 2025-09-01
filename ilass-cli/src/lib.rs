@@ -244,42 +244,59 @@ impl VideoFileHandler {
         video_decode_progress: impl video_decoder::ProgressHandler,
     ) -> Result<VideoFileHandler, InputVideoError> {
         //video_decoder::VideoDecoder::decode(file_path, );
-        use webrtc_vad::*;
+        use voice_activity_detector::VoiceActivityDetector;
 
-        struct WebRtcFvad {
-            fvad: Vad,
+        struct SileroVad {
+            detector: VoiceActivityDetector,
             vad_buffer: Vec<bool>,
+            sample_buffer: Vec<i16>,
         }
 
-        impl video_decoder::AudioReceiver for WebRtcFvad {
+        impl video_decoder::AudioReceiver for SileroVad {
             type Output = Vec<bool>;
             type Error = InputVideoError;
 
             fn push_samples(&mut self, samples: &[i16]) -> Result<(), InputVideoError> {
-                // the chunked audio receiver should only provide 10ms of 8000kHz -> 80 samples
-                assert!(samples.len() == 80);
+                // Accumulate i16 samples
+                self.sample_buffer.extend_from_slice(samples);
 
-                let is_voice = self
-                    .fvad
-                    .is_voice_segment(samples)
-                    .map_err(|_| InputVideoErrorKind::VadAnalysisFailed)?;
+                // Silero expects 512 samples (32ms at 16kHz), process when we have enough
+                while self.sample_buffer.len() >= 512 {
+                    let chunk: Vec<i16> = self.sample_buffer.drain(..512).collect();
 
-                self.vad_buffer.push(is_voice);
+                    let speech_prob = self.detector.predict(chunk);
+
+                    // Use 0.5 threshold for speech detection
+                    let is_voice = speech_prob > 0.5;
+                    self.vad_buffer.push(is_voice);
+                }
 
                 Ok(())
             }
 
-            fn finish(self) -> Result<Vec<bool>, InputVideoError> {
+            fn finish(mut self) -> Result<Vec<bool>, InputVideoError> {
+                // Process any remaining samples
+                if !self.sample_buffer.is_empty() {
+                    // Pad to 512 samples if needed
+                    self.sample_buffer.resize(512, 0);
+                    let speech_prob = self.detector.predict(self.sample_buffer);
+                    self.vad_buffer.push(speech_prob > 0.5);
+                }
                 Ok(self.vad_buffer)
             }
         }
 
-        let vad_processor = WebRtcFvad {
-            fvad: Vad::new_with_rate(SampleRate::Rate8kHz),
+        let vad_processor = SileroVad {
+            detector: VoiceActivityDetector::builder()
+                .sample_rate(16000)
+                .chunk_size(512usize)
+                .build()
+                .map_err(|_| InputVideoErrorKind::VadAnalysisFailed)?,
             vad_buffer: Vec::new(),
+            sample_buffer: Vec::new(),
         };
 
-        let chunk_processor = video_decoder::ChunkedAudioReceiver::new(80, vad_processor);
+        let chunk_processor = video_decoder::ChunkedAudioReceiver::new(160, vad_processor);
 
         let vad_buffer =
             video_decoder::VideoDecoder::decode(file_path, audio_index, chunk_processor, video_decode_progress)
@@ -315,7 +332,7 @@ impl VideoFileHandler {
 
         let subparse_timespans: Vec<TimeSpan> = voice_segments
             .into_iter()
-            .map(|(start, end)| TimeSpan::new(TimePoint::from_msecs(start * 10), TimePoint::from_msecs(end * 10)))
+            .map(|(start, end)| TimeSpan::new(TimePoint::from_msecs(start * 32), TimePoint::from_msecs(end * 32)))
             .collect();
 
         Ok(VideoFileHandler {

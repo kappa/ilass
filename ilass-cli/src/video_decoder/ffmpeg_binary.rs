@@ -243,9 +243,9 @@ impl VideoDecoderFFmpegBinary {
             // audio codec: 16-bit signed little endian
             OsString::from("-acodec"),
             OsString::from("pcm_s16le"),
-            // resample to 8khz
+            // resample to 16khz (required for Silero VAD)
             OsString::from("-ar"),
-            OsString::from("8000"),
+            OsString::from("16000"),
             // resample to single channel
             OsString::from("-ac"),
             OsString::from("1"),
@@ -268,7 +268,7 @@ impl VideoDecoderFFmpegBinary {
             .parse::<f64>()
             .with_context(|_| DecoderErrorKind::FailedToParseDuration { s: duration_str })?;
 
-        let num_samples: i64 = (duration * 8000.0) as i64 / PROGRESS_PRESCALER;
+        let num_samples: i64 = (duration * 16000.0) as i64 / PROGRESS_PRESCALER;
 
         progress_handler.init(num_samples);
 
