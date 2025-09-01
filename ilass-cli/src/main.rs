@@ -312,6 +312,9 @@ fn run() -> Result<(), failure::Error> {
 
     let ref_file = prepare_reference_file(&args)?;
 
+    // Print speech timeline analysis to verify audio structure assumptions
+    print_speech_timeline_analysis(ref_file.timespans(), inc_file.timespans());
+
     let output_file_format = inc_file.file_format();
 
     // this program internally stores the files in a non-destructable way (so
@@ -397,7 +400,7 @@ fn run() -> Result<(), failure::Error> {
             .collect(),
     );
 
-    for (shift_group_delta, shift_group_lines) in shift_groups {
+    for (shift_group_delta, shift_group_lines) in &shift_groups {
         // computes the first and last timestamp for all lines with that delta
         // -> that way we can provide the user with an information like
         //     "100 subtitles with 10min length"
@@ -412,13 +415,45 @@ fn run() -> Result<(), failure::Error> {
             .max()
             .expect("a subtitle group should have at least one subtitle line");
 
+        // Calculate alignment score for this specific block
+        let block_alg_timespans: Vec<ilass::TimeSpan> = timings_to_alg_timespans(&shift_group_lines, args.interval);
+        let shifted_block_spans: Vec<ilass::TimeSpan> = block_alg_timespans
+            .iter()
+            .map(|ts| *ts + *shift_group_delta)
+            .collect();
+        
+        let block_score = ilass::get_nosplit_score(
+            ref_aligner_timespans.iter().cloned(),
+            shifted_block_spans.iter().cloned(),
+            ilass::standard_scoring,
+        );
+
+        // Calculate score per subtitle for comparison
+        let score_per_subtitle = if shift_group_lines.len() > 0 {
+            block_score / shift_group_lines.len() as f64
+        } else {
+            0.0
+        };
+
         println!(
-            "shifted block of {} subtitles from {} to {} with length {} by {}",
+            "shifted block of {} subtitles from {} to {} with length {} by {} (score: {:.3}, per subtitle: {:.3})",
             shift_group_lines.len(),
             min,
             max,
             max - min,
-            alg_delta_to_delta(shift_group_delta, args.interval)
+            alg_delta_to_delta(*shift_group_delta, args.interval),
+            block_score,
+            score_per_subtitle
+        );
+    }
+
+    // Validate framerate detection using split groups if we used framerate correction
+    if args.guess_fps_ratio {
+        validate_fps_ratio_on_split_groups(
+            &ref_aligner_timespans,
+            &shift_groups,
+            args.interval,
+            fps_scaling_factor,
         );
     }
 

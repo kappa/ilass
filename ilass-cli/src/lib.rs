@@ -263,7 +263,7 @@ impl VideoFileHandler {
                 // Silero expects 512 samples (32ms at 16kHz), process when we have enough
                 while self.sample_buffer.len() >= 512 {
                     let chunk: Vec<i16> = self.sample_buffer.drain(..512).collect();
-
+                    
                     let speech_prob = self.detector.predict(chunk);
 
                     // Use 0.5 threshold for speech detection
@@ -439,6 +439,177 @@ pub fn guess_fps_ratio(
     progress_handler.finish();
 
     (opt_idx, opt_delta)
+}
+
+pub fn print_speech_timeline_analysis(ref_timespans: &[TimeSpan], subtitle_timespans: &[TimeSpan]) {
+    println!("=== SPEECH TIMELINE ANALYSIS ===");
+    
+    // Analyze first 20 minutes of both
+    let analysis_duration = TimeDelta::from_secs(20 * 60); // 20 minutes
+    
+    let ref_in_window: Vec<_> = ref_timespans
+        .iter()
+        .filter(|ts| ts.start <= TimePoint::from_secs(0) + analysis_duration)
+        .collect();
+    
+    let sub_in_window: Vec<_> = subtitle_timespans
+        .iter()
+        .filter(|ts| ts.start <= TimePoint::from_secs(0) + analysis_duration)
+        .collect();
+    
+    println!("First 20 minutes analysis:");
+    println!("  Audio speech segments: {}", ref_in_window.len());
+    println!("  Subtitle lines: {}", sub_in_window.len());
+    
+    // Calculate speech density (% of time with speech)
+    let total_ref_speech: i64 = ref_in_window.iter().map(|ts| ts.len().msecs()).sum();
+    let total_sub_time: i64 = sub_in_window.iter().map(|ts| ts.len().msecs()).sum();
+    
+    let ref_density = (total_ref_speech as f64 / (20.0 * 60.0 * 1000.0)) * 100.0;
+    let sub_density = (total_sub_time as f64 / (20.0 * 60.0 * 1000.0)) * 100.0;
+    
+    println!("  Audio speech density: {:.1}% of first 20 minutes", ref_density);
+    println!("  Subtitle time density: {:.1}% of first 20 minutes", sub_density);
+    
+    // Show ALL audio segments in first 20 minutes
+    println!("\nAll audio speech segments in first 20 minutes:");
+    for (i, ts) in ref_in_window.iter().enumerate() {
+        println!("  {:3}: {:>8} - {:>8} ({})", 
+                 i+1,
+                 format_timepoint(ts.start),
+                 format_timepoint(ts.end), 
+                 format_duration(ts.len()));
+    }
+    
+    // Show ALL subtitle lines in first 20 minutes
+    println!("\nAll subtitle timings in first 20 minutes:");
+    for (i, ts) in sub_in_window.iter().enumerate() {
+        println!("  {:3}: {:>8} - {:>8} ({})", 
+                 i+1,
+                 format_timepoint(ts.start),
+                 format_timepoint(ts.end),
+                 format_duration(ts.len()));
+    }
+    
+    // Find gaps in audio vs subtitles  
+    println!("\nLargest gaps in first 20 minutes:");
+    print_largest_gaps("Audio", &ref_in_window, 5);
+    print_largest_gaps("Subtitle", &sub_in_window, 5);
+    
+    println!("=== END SPEECH TIMELINE ANALYSIS ===\n");
+}
+
+fn format_timepoint(tp: TimePoint) -> String {
+    let total_secs = tp.msecs() / 1000;
+    let mins = total_secs / 60;
+    let secs = total_secs % 60;
+    format!("{}:{:02}", mins, secs)
+}
+
+fn format_duration(td: TimeDelta) -> String {
+    let secs = td.msecs() as f64 / 1000.0;
+    format!("{:.1}s", secs)
+}
+
+fn print_largest_gaps(label: &str, timespans: &[&TimeSpan], count: usize) {
+    let mut gaps = Vec::new();
+    for i in 1..timespans.len() {
+        let gap = timespans[i].start - timespans[i-1].end;
+        if gap > TimeDelta::from_secs(1) { // Only gaps > 1 second
+            gaps.push((gap, timespans[i-1].end, timespans[i].start));
+        }
+    }
+    gaps.sort_by_key(|&(gap, _, _)| -gap.msecs()); // Sort by gap size, descending
+    
+    for (i, (gap, start, end)) in gaps.iter().take(count).enumerate() {
+        println!("  {} gap #{}: {} ({} - {})", 
+                 label, 
+                 i+1, 
+                 format_duration(*gap),
+                 format_timepoint(*start), 
+                 format_timepoint(*end));
+    }
+}
+
+pub fn validate_fps_ratio_on_split_groups(
+    ref_spans: &[ilass::TimeSpan],
+    split_groups: &[(AlgTimeDelta, Vec<TimeSpan>)],
+    interval: i64,
+    original_fps_scaling_factor: f64,
+) {
+    if split_groups.len() <= 1 {
+        println!("info: no splits detected, framerate validation skipped");
+        return;
+    }
+
+    // Find the longest split group (most subtitles)
+    let longest_group = split_groups
+        .iter()
+        .max_by_key(|(_, timespans)| timespans.len())
+        .expect("should have at least one split group");
+
+    println!("info: validating framerate detection on largest split group ({} subtitles)", longest_group.1.len());
+
+    // Convert the longest group's timespans to algorithm format (without current scaling)
+    let group_alg_timespans: Vec<ilass::TimeSpan> = timings_to_alg_timespans(&longest_group.1, interval);
+
+    // Test framerate ratios on this split group
+    let ratios = [25./24., 25./23.976, 24./25., 24./23.976, 23.976/25., 23.976/24.];
+    let desc = ["25/24", "25/23.976", "24/25", "24/23.976", "23.976/25", "23.976/24"];
+
+    println!("info: framerate validation results for largest split group:");
+
+    // Test original (no scaling)
+    let (_, original_score) = ilass::align_nosplit(
+        ref_spans,
+        &group_alg_timespans,
+        ilass::overlap_scoring,
+        ilass::NoProgressHandler,
+    );
+    println!("  1.0 (original): {:.6}", original_score);
+
+    // Test each ratio
+    let mut best_score = original_score;
+    let mut best_ratio_idx = None;
+
+    for (ratio_idx, &scaling_factor) in ratios.iter().enumerate() {
+        let stretched_spans: Vec<ilass::TimeSpan> = group_alg_timespans
+            .iter()
+            .map(|ts| ts.scaled(scaling_factor))
+            .collect();
+
+        let (_, score) = ilass::align_nosplit(
+            ref_spans,
+            &stretched_spans,
+            ilass::overlap_scoring,
+            ilass::NoProgressHandler,
+        );
+
+        let marker = if (scaling_factor - original_fps_scaling_factor).abs() < 0.001 { " <- chosen" } else { "" };
+        println!("  {} ({}): {:.6}{}", desc[ratio_idx], scaling_factor, score, marker);
+
+        if score > best_score {
+            best_score = score;
+            best_ratio_idx = Some(ratio_idx);
+        }
+    }
+
+    // Analysis
+    if let Some(best_idx) = best_ratio_idx {
+        let best_ratio = ratios[best_idx];
+        if (best_ratio - original_fps_scaling_factor).abs() > 0.001 {
+            println!("warning: split-aware analysis suggests {} ({}) might be better than chosen {} ({:.6})",
+                desc[best_idx], best_ratio, original_fps_scaling_factor, original_fps_scaling_factor);
+            println!("  improvement: {:.6} -> {:.6} ({:+.6})", 
+                original_score, best_score, best_score - original_score);
+        } else {
+            println!("info: split-aware analysis confirms chosen framerate ratio is optimal for largest group");
+        }
+    } else {
+        println!("info: split-aware analysis confirms original (no scaling) is optimal for largest group");
+    }
+
+    println!();
 }
 
 pub fn print_error_chain(error: failure::Error) {
