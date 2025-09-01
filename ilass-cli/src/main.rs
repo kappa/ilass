@@ -413,8 +413,10 @@ fn run() -> Result<(), failure::Error> {
             .expect("a subtitle group should have at least one subtitle line");
 
         println!(
-            "shifted block of {} subtitles with length {} by {}",
+            "shifted block of {} subtitles from {} to {} with length {} by {}",
             shift_group_lines.len(),
+            min,
+            max,
             max - min,
             alg_delta_to_delta(shift_group_delta, args.interval)
         );
